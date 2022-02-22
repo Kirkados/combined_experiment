@@ -1,0 +1,5 @@
+__pycache__/
+Tensorboard/
+git_commands.txt
+*.mp4
+*.out

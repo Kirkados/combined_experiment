@@ -1,28 +1,22 @@
 """
-This script provides the environment for a free flying spacecraft with a
+This script provides the environment for a free flying spacecraft with a static
 three-link manipulator.
 
-The spacecraft & manipulator are tasked with simultaneously docking to and detumbling a piece of debris
-Originally this was going to be completed in two tasks, but after reading
-
-Virgili-Llop and Romano 2019, Simultaneous Capture and Detumble of a Resident Space Object by a Free-flying Spacecraft-manipulator System
-
-a simultaneous approach was chosen.
+The spacecraft is tasked with performing pose tracking of a spinning target satellite.
+Arm deployment and capture are solved by separate methods; a guidance system for
+the tracking is learned here.
 
 The policy is trained in a DYNAMICS environment (in contrast to my previous work) for a number of reasons:
-    1) Training in kinematics assumes that each state has no influence on any other state. The perfect controller
-       is assumed to handle everything. This is fine for planar motion where there is no coupling between
-       the states, but it does not apply to complex scenarios where there is coupling between the states.
-       For example, moving the shoulder joint will affect the motion of the spacecraft--a kinematics 
-       environment would not capture that.
-    2) By training in a dynamics environment, the policy will overfit the simulated dynamics.
+    1) By training in a dynamics environment, the policy will overfit the simulated dynamics.
        For that reason, I'll try to make them as accurate as possible. However, I will still be commanding 
        acceleration signals which an on-board controller is responsible for tracking. So, small
        changes should be tolerated so long as they do not spoil the learned logic.
-    3) I'll have to use a controller in simulation which will also become overfit. However,
+    2) I'll have to use a controller in simulation which will also become overfit. However,
        overfitting to a real controller is probably better than overfitting to an ideal controller
        like we were doing before. Plus, we know what sort of controller we actually have in the lab.
-    4) These changes are needed to solve the dynamic coupling problem present in most complex scenarios.
+    3) These changes are needed to solve the dynamic coupling problem present in most complex scenarios.
+       Although there isn't significant dynamic coupling in this task, training in a dynamics environment
+       is likely better anyways.
 
 All dynamic environments I create will have a standardized architecture. The
 reason for this is I have one learning algorithm and many environments. All
@@ -48,21 +42,9 @@ Communication with agent:
         env_to_agent: the environment (this script) returns information to the agent
 
 Reward system:
-        - Zero reward at nearly all timesteps except when docking is achieved
-        - A mid-way reward for when the end-effector comes within a set distance from the docking port, to help guide the learning slightly.
-        - A large reward when docking occurs. The episode also terminates when docking occurs
-        - A variety of penalties to help with docking, such as:
-            - penalty for end-effector angle (so it goes into the docking cone properly)
-            - penalty for relative velocity during the docking (so the end-effector doesn't jab the docking cone)
-            - penalty for relatlive angular velocity of the end-effector during docking
-            - penalty for residual angular momentum of the combined system after docking to pursuade simultaneous debumbling.
-        - A penalty for colliding with the target. Instead of assigning a penalty, the episode simply ends. A penalty alone caused
-          the chaser to accept penalties in pursuit of docking, and a penalty + ending made the chaser avoid the target all together.
-        
-        Once learned, some optional rewards can be applied to see how it affects the motion:
-            - In the future, a penalty for attitude disturbance on the chaser base attitude??? 
-            - A penalty to all accelerations??
-            - Extend the forbidden area into a larger cone to force the approach to be more cone-shaped??
+        - A differential reward field provides shaped rewards to incentivize the 
+          chaser to track the desired hold point infront of the target.
+        - A penalty is given proportional to acceleration signals to discourage fuel useage.
 
 State clarity:
     - Note: TOTAL_STATE contains all relevant information describing the problem, and all the information needed to animate the motion
@@ -73,7 +55,7 @@ State clarity:
         = The total state information returned must be as commented beside self.TOTAL_STATE_SIZE.
         
         
-Started December 2, 2020
+Started February 21, 2022
 @author: Kirk Hovell (khovell@gmail.com)
 """
 import numpy as np
@@ -119,12 +101,10 @@ class Environment:
         #         The TOTAL_STATE is passed to the animator below to animate the motion.
         #         The chaser and target state are contained in the environment. They are packaged up before being returned to the agent.
         #         The total state information returned must be as commented beside self.TOTAL_STATE_SIZE.
-        #self.IRRELEVANT_STATES                = [15,16,18,19,20,21] # [target_velocity & end-effector states] indices of states who are irrelevant to the policy network
-        #self.IRRELEVANT_STATES                = [0,1,12,13,14,15,16,18,19,20,21,25,26,27,28] # [relative position and chaser info] indices of states who are irrelevant to the policy network
-        self.IRRELEVANT_STATES                = [12,13,14,15,16,18,19,20,21,25,26,27,28] # [relative position and chaser info + chaser x&y for table falling] indices of states who are irrelevant to the policy network
-        #self.IRRELEVANT_STATES                = [0,1, 6, 7, 9,10,12,13,14,15,16,18,19,20,21] # [ee_b_wristangle_relative_pos_body_accels] indices of states who are irrelevant to the policy network
+        #self.IRRELEVANT_STATES                = [6,7,8,9,10,11,18,19,20,21,22,23,24,25,26,27,28] # [chaser and target absolute position and rates (angular rate only for target)] indices of states who are irrelevant to the policy network
+        self.IRRELEVANT_STATES                = [6,7,8,9,10,11,12,13,14,15,16,18,19,20,21,25,26,27,28] # [chaser absolute position and rate, target relative position and absolute angular rate] indices of states who are irrelevant to the policy network
         self.OBSERVATION_SIZE                 = self.TOTAL_STATE_SIZE - len(self.IRRELEVANT_STATES) # the size of the observation input to the policy
-        self.ACTION_SIZE                      = 6 # [x_dot_dot, y_dot_dot, theta_dot_dot, shoulder_theta_dot_dot, elbow_theta_dot_dot, wrist_theta_dot_dot] in the inertial frame for x, y, theta; in the joint frame for the others.
+        self.ACTION_SIZE                      = 3 # [x_dot_dot, y_dot_dot, theta_dot_dot] in the inertial frame for x, y, theta.
         self.MAX_X_POSITION                   = 3.5 # [m]
         self.MAX_Y_POSITION                   = 2.4 # [m]
         self.MAX_VELOCITY                     = 0.1 # [m/s]
@@ -132,13 +112,10 @@ class Environment:
         self.MAX_ARM_ANGULAR_VELOCITY         = 30*np.pi/180 # [rad/s] for joints
         self.MAX_LINEAR_ACCELERATION          = 0.02#0.015 # [m/s^2]
         self.MAX_ANGULAR_ACCELERATION         = 0.05#0.04 # [rad/s^2]
-        self.MAX_ARM_ANGULAR_ACCELERATION     = 0.1 # [rad/s^2]
         self.MAX_THRUST                       = 0.5 # [N] Experimental limitation
         self.MAX_BODY_TORQUE                  = 0.064 # [Nm] # Experimental limitation
-        self.MAX_JOINT1n2_TORQUE              = 0.02 # [Nm] # Limited by the simulator NOT EXPERIMENT
-        self.MAX_JOINT3_TORQUE                = 0.0002 # [Nm] Limited by the simulator NOT EXPERIMENT
-        self.LOWER_ACTION_BOUND               = np.array([-self.MAX_LINEAR_ACCELERATION, -self.MAX_LINEAR_ACCELERATION, -self.MAX_ANGULAR_ACCELERATION, -self.MAX_ARM_ANGULAR_ACCELERATION, -self.MAX_ARM_ANGULAR_ACCELERATION, -self.MAX_ARM_ANGULAR_ACCELERATION]) # [m/s^2, m/s^2, rad/s^2, rad/s^2, rad/s^2, rad/s^2]
-        self.UPPER_ACTION_BOUND               = np.array([ self.MAX_LINEAR_ACCELERATION,  self.MAX_LINEAR_ACCELERATION,  self.MAX_ANGULAR_ACCELERATION,  self.MAX_ARM_ANGULAR_ACCELERATION,  self.MAX_ARM_ANGULAR_ACCELERATION,  self.MAX_ARM_ANGULAR_ACCELERATION]) # [m/s^2, m/s^2, rad/s^2, rad/s^2, rad/s^2, rad/s^2]
+        self.LOWER_ACTION_BOUND               = np.array([-self.MAX_LINEAR_ACCELERATION, -self.MAX_LINEAR_ACCELERATION, -self.MAX_ANGULAR_ACCELERATION]) # [m/s^2, m/s^2, rad/s^2, rad/s^2, rad/s^2, rad/s^2]
+        self.UPPER_ACTION_BOUND               = np.array([ self.MAX_LINEAR_ACCELERATION,  self.MAX_LINEAR_ACCELERATION,  self.MAX_ANGULAR_ACCELERATION]) # [m/s^2, m/s^2, rad/s^2, rad/s^2, rad/s^2, rad/s^2]
                 
         self.LOWER_STATE_BOUND                = np.array([ 0.0, 0.0, 0.0, -self.MAX_VELOCITY, -self.MAX_VELOCITY, -self.MAX_BODY_ANGULAR_VELOCITY,  # Chaser 
                                                           -np.pi/2, -np.pi/2, -np.pi/2, # Shoulder_theta, Elbow_theta, Wrist_theta
@@ -156,11 +133,10 @@ class Environment:
                                                           self.MAX_X_POSITION, self.MAX_Y_POSITION, 2*np.pi, #relative_x_i, relative_y_i, relative_theta,
                                                           0.688, 0.8, 0.2, 0.2]) #ee_x_b, ee_y_b, ee_x_dot_b, ee_y_dot_b
                                                           # [m, m, rad, m/s, m/s, rad/s, rad, rad, rad, rad/s, rad/s, rad/s, m, m, rad, m/s, m/s, rad/s, m, m, m/s, m/s, m, m, rad, m, m, m/s, m/s] // Upper bound for each element of TOTAL_STATE
-        #self.INITIAL_CHASER_POSITION          = np.array([self.MAX_X_POSITION/2, self.MAX_Y_POSITION/2, 0.0]) # [m, m, rad]
         self.INITIAL_CHASER_POSITION          = np.array([self.MAX_X_POSITION/3, self.MAX_Y_POSITION/2, 0.0]) # [m, m, rad]
         self.INITIAL_CHASER_VELOCITY          = np.array([0.0,  0.0, 0.0]) # [m/s, m/s, rad/s]
         self.INITIAL_ARM_ANGLES               = np.array([0.0,  0.0, 0.0]) # [rad, rad, rad]
-        self.INITIAL_ARM_RATES                = np.array([0.0,  0.0, 0.0]) # [rad/s, rad/s, rad/s]
+        #self.INITIAL_ARM_RATES                = np.array([0.0,  0.0, 0.0]) # [rad/s, rad/s, rad/s]
         #self.INITIAL_TARGET_POSITION          = np.array([self.MAX_X_POSITION/2, self.MAX_Y_POSITION/2, 0.0]) # [m, m, rad]
         self.INITIAL_TARGET_POSITION          = np.array([self.MAX_X_POSITION*2/3, self.MAX_Y_POSITION/2, 0.0]) # [m, m, rad]
         self.INITIAL_TARGET_VELOCITY          = np.array([0.0,  0.0, 0.0]) # [m/s, m/s, rad/s]
@@ -172,12 +148,15 @@ class Environment:
         self.RANDOMIZATION_CHASER_VELOCITY    = 0.0 # [m/s] half-range uniform randomization chaser velocity
         self.RANDOMIZATION_CHASER_OMEGA       = 0.0 # [rad/s] half-range uniform randomization chaser omega
         self.RANDOMIZATION_ANGLE              = np.pi # [rad] half-range uniform randomization chaser and target base angle
-        self.RANDOMIZATION_ARM_ANGLE          = np.pi/2 # [rad] half-range uniform randomization arm angle
-        self.RANDOMIZATION_ARM_RATES          = 0.0 # [rad/s] half-range uniform randomization arm rates
+        #self.RANDOMIZATION_ARM_ANGLE          = np.pi/2 # [rad] half-range uniform randomization arm angle
+        #self.RANDOMIZATION_ARM_RATES          = 0.0 # [rad/s] half-range uniform randomization arm rates
         self.RANDOMIZATION_TARGET_VELOCITY    = 0.0 # [m/s] half-range uniform randomization target velocity
         self.RANDOMIZATION_TARGET_OMEGA       = 10*np.pi/180 # [rad/s] half-range uniform randomization target omega
-        self.MIN_V                            = -100.
-        self.MAX_V                            =  125.
+        
+        # Reward characteristics 
+this needs to be corrected
+        self.MIN_V                            = -1000.
+        self.MAX_V                            =  100.
         self.N_STEP_RETURN                    =   5
         self.DISCOUNT_FACTOR                  = 0.95**(1/self.N_STEP_RETURN)
         self.TIMESTEP                         = 0.2 # [s]
@@ -224,6 +203,7 @@ class Environment:
         self.DOCKING_PORT_CORNER1_POSITION = self.DOCKING_PORT_MOUNT_POSITION + [ 0.0508, 0.0432562] # position of the docking cone on the target in its body frame
         self.DOCKING_PORT_CORNER2_POSITION = self.DOCKING_PORT_MOUNT_POSITION + [-0.0508, 0.0432562] # position of the docking cone on the target in its body frame
                 
+        start here
         # Reward function properties
         self.DOCKING_REWARD                        = 100 # A lump-sum given to the chaser when it docks
         self.SUCCESSFUL_DOCKING_RADIUS             = 0.04 # [m] distance at which the magnetic docking can occur

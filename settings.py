@@ -15,9 +15,9 @@ class Settings:
     ##### Run Settings #####
     ########################
 
-    RUN_NAME               = 'spinning_target_12days_training'
+    RUN_NAME               = 'ONE_ACTOR_first_run_combined_experiment'
     RESUME_TRAINING        = False # If True, main.py must be run from a previous run's 'code' folder.
-    ENVIRONMENT            = 'manipulator' # uncomment for regular training
+    ENVIRONMENT            = 'combined' # uncomment for regular training
     #ENVIRONMENT            = 'fixedICs' # uncomment this option for testing what would have occurred from given initial conditions (also set RESUME_TRAINING to True)
     AGENT                  = '' # '' for Task 1, '_runway' for runway experiment
     RECORD_VIDEO           = True
@@ -35,7 +35,7 @@ class Settings:
     #############################
 
     # Hyperparameters
-    NUMBER_OF_ACTORS        = 10 # ideal number of agents it seems
+    NUMBER_OF_ACTORS        = 1 # ideal number of agents it seems
     NUMBER_OF_EPISODES      = 1e10 # that each agent will perform
     MAX_TRAINING_ITERATIONS = 1e10 # of neural networks
     ACTOR_LEARNING_RATE     = 0.0001

@@ -82,7 +82,7 @@ config.intra_op_parallelism_threads = 0 # auto-picked by tensorflow yields best 
 config.inter_op_parallelism_threads = 0 # auto-picked by tensorflow yields best results
 
 # Check if we're using the right environment
-if Settings.ENVIRONMENT != 'manipulator' and Settings.RESUME_TRAINING == False:
+if Settings.ENVIRONMENT != 'combined' and Settings.RESUME_TRAINING == False:
     print("You must set RESUME_TRAINING to True in settings.py if you wish to use environment_fixedICs")
     raise SystemExit
 

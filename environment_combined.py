@@ -114,6 +114,8 @@ class Environment:
         self.MAX_ANGULAR_ACCELERATION         = 0.05#0.04 # [rad/s^2]
         self.MAX_THRUST                       = 0.5 # [N] Experimental limitation
         self.MAX_BODY_TORQUE                  = 0.064 # [Nm] # Experimental limitation
+        self.MAX_JOINT1n2_TORQUE              = 0.02 # [Nm] # Limited by the simulator NOT EXPERIMENT
+        self.MAX_JOINT3_TORQUE                = 0.0002 # [Nm] Limited by the simulator NOT EXPERIMENT
         self.LOWER_ACTION_BOUND               = np.array([-self.MAX_LINEAR_ACCELERATION, -self.MAX_LINEAR_ACCELERATION, -self.MAX_ANGULAR_ACCELERATION]) # [m/s^2, m/s^2, rad/s^2, rad/s^2, rad/s^2, rad/s^2]
         self.UPPER_ACTION_BOUND               = np.array([ self.MAX_LINEAR_ACCELERATION,  self.MAX_LINEAR_ACCELERATION,  self.MAX_ANGULAR_ACCELERATION]) # [m/s^2, m/s^2, rad/s^2, rad/s^2, rad/s^2, rad/s^2]
                 
@@ -136,7 +138,7 @@ class Environment:
         self.INITIAL_CHASER_POSITION          = np.array([self.MAX_X_POSITION/3, self.MAX_Y_POSITION/2, 0.0]) # [m, m, rad]
         self.INITIAL_CHASER_VELOCITY          = np.array([0.0,  0.0, 0.0]) # [m/s, m/s, rad/s]
         self.INITIAL_ARM_ANGLES               = np.array([0.0,  0.0, 0.0]) # [rad, rad, rad]
-        #self.INITIAL_ARM_RATES                = np.array([0.0,  0.0, 0.0]) # [rad/s, rad/s, rad/s]
+        self.INITIAL_ARM_RATES                = np.array([0.0,  0.0, 0.0]) # [rad/s, rad/s, rad/s]
         #self.INITIAL_TARGET_POSITION          = np.array([self.MAX_X_POSITION/2, self.MAX_Y_POSITION/2, 0.0]) # [m, m, rad]
         self.INITIAL_TARGET_POSITION          = np.array([self.MAX_X_POSITION*2/3, self.MAX_Y_POSITION/2, 0.0]) # [m, m, rad]
         self.INITIAL_TARGET_VELOCITY          = np.array([0.0,  0.0, 0.0]) # [m/s, m/s, rad/s]
@@ -153,8 +155,7 @@ class Environment:
         self.RANDOMIZATION_TARGET_VELOCITY    = 0.0 # [m/s] half-range uniform randomization target velocity
         self.RANDOMIZATION_TARGET_OMEGA       = 10*np.pi/180 # [rad/s] half-range uniform randomization target omega
         
-        # Reward characteristics 
-this needs to be corrected
+        # Other characteristics 
         self.MIN_V                            = -1000.
         self.MAX_V                            =  100.
         self.N_STEP_RETURN                    =   5
@@ -165,7 +166,7 @@ this needs to be corrected
         self.PREDETERMINED_ACTION             = np.array([0.01,-0.015,0.03,-0.07,0.01,0.1])
         self.DYNAMICS_DELAY                   = 0 # [timesteps of delay] how many timesteps between when an action is commanded and when it is realized
         self.AUGMENT_STATE_WITH_ACTION_LENGTH = 0 # [timesteps] how many timesteps of previous actions should be included in the state. This helps with making good decisions among delayed dynamics.
-        self.MAX_NUMBER_OF_TIMESTEPS          = 300# per episode
+        self.MAX_NUMBER_OF_TIMESTEPS          = 900# per episode
         self.ADDITIONAL_VALUE_INFO            = False # whether or not to include additional reward and value distribution information on the animations
         self.SKIP_FAILED_ANIMATIONS           = True # Error the program or skip when animations fail?        
         #self.KI                               = [17.0,17.0,0.295,0.02,0.0036,0.00008] # Integral gains for the integral-acceleration controller of the body and arm (x, y, theta, theta1, theta2, theta3)
@@ -203,17 +204,30 @@ this needs to be corrected
         self.DOCKING_PORT_CORNER1_POSITION = self.DOCKING_PORT_MOUNT_POSITION + [ 0.0508, 0.0432562] # position of the docking cone on the target in its body frame
         self.DOCKING_PORT_CORNER2_POSITION = self.DOCKING_PORT_MOUNT_POSITION + [-0.0508, 0.0432562] # position of the docking cone on the target in its body frame
                 
-        start here
-        # Reward function properties
-        self.DOCKING_REWARD                        = 100 # A lump-sum given to the chaser when it docks
-        self.SUCCESSFUL_DOCKING_RADIUS             = 0.04 # [m] distance at which the magnetic docking can occur
-        self.MAX_DOCKING_ANGLE_PENALTY             = 50 # A penalty given to the chaser, upon docking, for having an angle when docking. The penalty is 0 upon perfect docking and MAX_DOCKING_ANGLE_PENALTY upon perfectly bad docking
-        self.DOCKING_EE_VELOCITY_PENALTY           = 50 # A penalty given to the chaser, upon docking, for every 1 m/s end-effector collision velocity upon docking
+        
+        # NEW (Combined experiment) reward function properties
+        self.TARGET_REWARD            =   1. # reward per second
+        self.FALL_OFF_TABLE_PENALTY   =   0.
+        self.END_ON_FALL              = False # end episode on a fall off the table
+        self.GOAL_REWARD              =   0.
+        self.NEGATIVE_PENALTY_FACTOR  = 1.5 # How much of a factor to additionally penalize negative rewards
+        self.MAX_NUMBER_OF_TIMESTEPS  = 900 # per episode -- 450 for stationary, 900 for rotating
+        self.ADDITIONAL_VALUE_INFO    = False # whether or not to include additional reward and value distribution information on the animations
+        self.REWARD_TYPE              = True # True = Linear; False = Exponential
+        self.REWARD_WEIGHTING         = [0.5, 0.5, 0.1] # How much to weight the rewards in the state
+        self.REWARD_MULTIPLIER        = 250 # how much to multiply the differential reward by
+        
+        
+        # Old (Phase 3) Reward function properties
+        self.DOCKING_REWARD                        = 0 # A lump-sum given to the chaser when it docks
+        self.SUCCESSFUL_DOCKING_RADIUS             = 0 # [m] distance at which the magnetic docking can occur
+        self.MAX_DOCKING_ANGLE_PENALTY             = 0 # A penalty given to the chaser, upon docking, for having an angle when docking. The penalty is 0 upon perfect docking and MAX_DOCKING_ANGLE_PENALTY upon perfectly bad docking
+        self.DOCKING_EE_VELOCITY_PENALTY           = 0 # A penalty given to the chaser, upon docking, for every 1 m/s end-effector collision velocity upon docking
         self.ALLOWED_EE_COLLISION_VELOCITY         = 0 # [m/s] the end-effector is not penalized if it collides with the docking port at up to this speed.
-        self.DOCKING_ANGULAR_VELOCITY_PENALTY      = 25 # A penalty given to the chaser, upon docking, for every 1 rad/s angular body velocity upon docking
+        self.DOCKING_ANGULAR_VELOCITY_PENALTY      = 0 # A penalty given to the chaser, upon docking, for every 1 rad/s angular body velocity upon docking
         self.ALLOWED_EE_COLLISION_ANGULAR_VELOCITY = 0 # [rad/s] the end-effector is not penalized if it collides with the docking port at up to this angular velocity.
-        self.END_ON_FALL                           = True # end episode on a fall off the table        
-        self.FALL_OFF_TABLE_PENALTY                = 100.
+        #self.END_ON_FALL                           = True # end episode on a fall off the table        
+        #self.FALL_OFF_TABLE_PENALTY                = 100.
         self.CHECK_CHASER_TARGET_COLLISION         = True
         self.TARGET_COLLISION_PENALTY              = 0 # [rewards/timestep] penalty given for colliding with target  
         self.CHECK_END_EFFECTOR_COLLISION          = True # Whether to do collision detection on the end-effector
@@ -221,12 +235,12 @@ this needs to be corrected
         self.END_EFFECTOR_COLLISION_PENALTY        = 0 # [rewards/timestep] Penalty for end-effector collisions (with target or optionally with the forbidden zone)
         self.END_ON_COLLISION                      = True # Whether to end the episode upon a collision.
         self.GIVE_MID_WAY_REWARD                   = True # Whether or not to give a reward mid-way towards the docking port to encourage the learning to move in the proper direction
-        self.MID_WAY_REWARD_RADIUS                 = 0.1 # [ms] the radius from the DOCKING_PORT_MOUNT_POSITION that the mid-way reward is given
-        self.MID_WAY_REWARD                        = 25 # The value of the mid-way reward
-        self.ANGULAR_MOMENTUM_PENALTY              = 50 # Max angular momentum penalty to give...
-        self.AT_MAX_ANGULAR_MOMENTUM               = 2 # [kg m^2/s] which is given at this angular momentum
+        self.MID_WAY_REWARD_RADIUS                 = 0 # [ms] the radius from the DOCKING_PORT_MOUNT_POSITION that the mid-way reward is given
+        self.MID_WAY_REWARD                        = 0 # The value of the mid-way reward
+        self.ANGULAR_MOMENTUM_PENALTY              = 0 # Max angular momentum penalty to give...
+        self.AT_MAX_ANGULAR_MOMENTUM               = 10000 # [kg m^2/s] which is given at this angular momentum
         self.END_ON_ARM_LIMITS                     = False # Whether or not to end the episode when an arm link reaches its limit
-        self.ARM_LIMIT_PENALTY                     = 5 #[rewards/timestep/link] Penalty for manipulator joints reaching their limits
+        self.ARM_LIMIT_PENALTY                     = 0 #[rewards/timestep/link] Penalty for manipulator joints reaching their limits
         
         
         # Some calculations that don't need to be changed
@@ -253,7 +267,10 @@ this needs to be corrected
         np.random.seed()
                 
         # Resetting the time
-        self.time = 0.        
+        self.time = 0.       
+        
+        # Resetting phase number so we complete phase 0 before moving on to phase 1
+        self.phase_number = 0
 
         # Logging whether it is test time for this episode
         self.test_time = test_time
@@ -271,10 +288,10 @@ this needs to be corrected
             self.target_position = self.INITIAL_TARGET_POSITION + np.random.uniform(low = -1, high = 1, size = 3)*[self.RANDOMIZATION_LENGTH_X, self.RANDOMIZATION_LENGTH_Y, self.RANDOMIZATION_ANGLE]
             # Randomizing target velocity in Inertial frame
             self.target_velocity = self.INITIAL_TARGET_VELOCITY + np.random.uniform(low = -1, high = 1, size = 3)*[self.RANDOMIZATION_TARGET_VELOCITY, self.RANDOMIZATION_TARGET_VELOCITY, self.RANDOMIZATION_TARGET_OMEGA]
-            # Randomizing arm angles in Body frame
-            self.arm_angles = self.INITIAL_ARM_ANGLES + np.random.uniform(low = -1, high = 1, size = 3)*[self.RANDOMIZATION_ARM_ANGLE, self.RANDOMIZATION_ARM_ANGLE, self.RANDOMIZATION_ARM_ANGLE]
-            # Randomizing arm angular rates in body frame
-            self.arm_angular_rates = self.INITIAL_ARM_RATES + np.random.uniform(low = -1, high = 1, size = 3)*[self.RANDOMIZATION_ARM_RATES, self.RANDOMIZATION_ARM_RATES, self.RANDOMIZATION_ARM_RATES]
+            # Arm is never randomized
+            self.arm_angles = self.INITIAL_ARM_ANGLES# + np.random.uniform(low = -1, high = 1, size = 3)*[self.RANDOMIZATION_ARM_ANGLE, self.RANDOMIZATION_ARM_ANGLE, self.RANDOMIZATION_ARM_ANGLE]
+            # Arm is never randomized
+            self.arm_angular_rates = self.INITIAL_ARM_RATES# + np.random.uniform(low = -1, high = 1, size = 3)*[self.RANDOMIZATION_ARM_RATES, self.RANDOMIZATION_ARM_RATES, self.RANDOMIZATION_ARM_RATES]
             
 
         else:
@@ -310,8 +327,8 @@ this needs to be corrected
             self.reset(test_time)        
  
         # Initializing the previous velocity and control effort for the integral-acceleration controller
-        self.previous_velocity       = np.zeros(self.ACTION_SIZE)
-        self.previous_control_effort = np.zeros(self.ACTION_SIZE)
+        self.previous_velocity       = np.zeros(self.ACTION_SIZE + 3)
+        self.previous_control_effort = np.zeros(self.ACTION_SIZE + 3)
         
         # Initializing integral anti-wind-up that checks if the joints angles have been reached
         self.joints_past_limits = [False, False, False]
@@ -452,6 +469,7 @@ this needs to be corrected
         
         # Assembles all chaser-relevant data into a state to be fed to the equations of motion
         
+        #total_chaser_state = np.concatenate([self.chaser_position, self.chaser_velocity])
         total_chaser_state = np.concatenate([self.chaser_position, self.arm_angles, self.chaser_velocity, self.arm_angular_rates])
         
         return total_chaser_state
@@ -536,7 +554,7 @@ this needs to be corrected
         ########################################
         ### Integral-acceleration controller ###
         ########################################
-        desired_accelerations = action
+        desired_accelerations = np.concatenate([action,np.array([0,0,0])])
         if self.CALIBRATE_TIMESTEP:
             desired_accelerations = self.PREDETERMINED_ACTION
         
@@ -631,8 +649,8 @@ this needs to be corrected
         acceleration_error = desired_accelerations - current_accelerations
         
         # If the joint is currently at its limit and the desired acceleration is worsening the problem, set the acceleration error to 0. This will prevent further integral wind-up but not release the current wind-up.
-        acceleration_errors_to_zero = (self.joints_past_limits) & (np.sign(desired_accelerations[3:]) == np.sign(self.arm_angles))
-        acceleration_error[3:][acceleration_errors_to_zero] = 0
+        #acceleration_errors_to_zero = (self.joints_past_limits) & (np.sign(desired_accelerations[3:]) == np.sign(self.arm_angles))
+        #acceleration_error[3:][acceleration_errors_to_zero] = 0
                 
         # Apply the integral controller 
         control_effort = self.previous_control_effort + self.KI * acceleration_error
@@ -660,10 +678,11 @@ this needs to be corrected
             print("Current, Desired, Unclipped, Clipped\n", np.concatenate([current_accelerations.reshape([1,-1]), desired_accelerations.reshape([1,-1]), unclipped.reshape([1, -1]), control_effort.reshape([1,-1])], axis=0))
         else:
             control_effort = np.clip(control_effort, -limits, limits)
+            print(control_effort)
             #pass
             
         # [F_x, F_y, torque, torque1, torque2, torque3]
-        return control_effort.reshape([self.ACTION_SIZE,1])
+        return control_effort.reshape([self.ACTION_SIZE+3,1])
         
     
     def make_jacobian_Jc1(self):
@@ -864,89 +883,66 @@ this needs to be corrected
 
     def reward_function(self, action):
         # Returns the reward for this TIMESTEP as a function of the state and action
-        
-        """
-        Reward system:
-                - Zero reward at all timesteps except when docking is achieved
-                - A large reward when docking occurs. The episode also terminates when docking occurs
-                - A variety of penalties to help with docking, such as:
-                    - penalty for end-effector angle (so it goes into the docking cone properly)
-                    - penalty for relative velocity during the docking (so the end-effector doesn't jab the docking cone)
-	- penalty for angular velocity of the end-effector upon docking
-                - A penalty for colliding with the target
-                - 
-         """ 
-                
-        # Initializing the reward
-        reward = 0
-        
-        # Give a large reward for docking
-        if self.docked:
-            
-            reward += self.DOCKING_REWARD
-            
-            # Penalize for end-effector angle
-            end_effector_angle_inertial = self.chaser_position[-1] + np.sum(self.arm_angles) + np.pi/2
-            
-            # Docking cone angle in the target body frame
-            docking_cone_angle_body = np.arctan2(self.DOCKING_PORT_CORNER1_POSITION[1] - self.DOCKING_PORT_CORNER2_POSITION[1], self.DOCKING_PORT_CORNER1_POSITION[0] - self.DOCKING_PORT_CORNER2_POSITION[0])
-            docking_cone_angle_inertial = docking_cone_angle_body + self.target_position[-1] - np.pi/2 # additional -pi/2 since we must dock perpendicular into the cone
-            
-            # Calculate the docking angle error
-            docking_angle_error = (docking_cone_angle_inertial - end_effector_angle_inertial + np.pi) % (2*np.pi) - np.pi # wrapping to [-pi, pi] 
-            
-            # Penalize for any non-zero angle
-            reward -= np.abs(np.sin(docking_angle_error/2)) * self.MAX_DOCKING_ANGLE_PENALTY
 
-            # Calculating the docking velocity error
-            docking_relative_velocity = self.end_effector_velocity - self.docking_port_velocity
+        # Sets the current location that we are trying to move to
+        if self.phase_number == 0:
+            desired_location = self.hold_point
+        elif self.phase_number == 1:
+            desired_location = self.docking_port
+
+
+        current_position_reward = np.zeros(1)
+
+        # Calculates a reward map
+        if self.REWARD_TYPE:
+            # Linear reward
+            current_position_reward = -np.abs((desired_location - self.state[:self.POSITION_STATE_LENGTH])*self.REWARD_WEIGHTING)* self.TARGET_REWARD
+        else:
+            # Exponential reward
+            current_position_reward = np.exp(-np.sum(np.absolute(desired_location - self.state[:self.POSITION_STATE_LENGTH])*self.REWARD_WEIGHTING)) * self.TARGET_REWARD
+
+        reward = np.zeros(1)
+
+        # If it's not the first timestep, calculate the differential reward
+        if np.all([self.previous_position_reward[i] is not None for i in range(len(self.previous_position_reward))]):
+            reward = (current_position_reward - self.previous_position_reward)*self.REWARD_MULTIPLIER
+            for i in range(len(reward)):
+                if reward[i] < 0:
+                    reward[i]*= self.NEGATIVE_PENALTY_FACTOR
+
+        self.previous_position_reward = current_position_reward
+
+        # Collapsing to a scalar
+        reward = np.sum(reward)
+
+        # Giving a penalty for docking too quickly
+        if self.phase_number == 1 and np.any(np.abs(action) > self.MAX_DOCKING_SPEED):
+            reward -= self.DOCKING_TOO_FAST_PENALTY
+
+        # Giving a massive penalty for falling off the table
+        if self.state[0] > self.UPPER_STATE_BOUND[0] or self.state[0] < self.LOWER_STATE_BOUND[0] or self.state[1] > self.UPPER_STATE_BOUND[1] or self.state[1] < self.LOWER_STATE_BOUND[1]:
+            reward -= self.FALL_OFF_TABLE_PENALTY/self.TIMESTEP
+
+        # Giving a large reward for completing the task
+        if np.sum(np.absolute(self.state[:self.POSITION_STATE_LENGTH] - desired_location)) < 0.01:
+            reward += self.GOAL_REWARD
             
-            # Applying the penalty
-            reward -= np.maximum(0, np.linalg.norm(docking_relative_velocity) - self.ALLOWED_EE_COLLISION_VELOCITY) * self.DOCKING_EE_VELOCITY_PENALTY # 
+        # Giving a large penalty for colliding with the obstacle
+        if np.linalg.norm(self.state[:self.POSITION_STATE_LENGTH-1] - self.obstacle_location) <= self.OBSTABLE_DISTANCE and self.USE_OBSTACLE:
+            reward -= self.OBSTABLE_PENALTY
             
-            # Penalize for relative end-effector angular velocity upon docking
-            end_effector_angular_velocity = self.chaser_velocity[-1] + np.sum(self.arm_angular_rates)
-            reward -= np.maximum(0, np.abs(end_effector_angular_velocity - self.target_velocity[-1]) - self.ALLOWED_EE_COLLISION_ANGULAR_VELOCITY) * self.DOCKING_ANGULAR_VELOCITY_PENALTY
-                        
-            # Calculate combined angular momentum of docked system
-            h_total_combined_com, combined_angular_velocity = self.combined_angular_momentum()
-            
-            # Add the penalty
-            reward -= self.ANGULAR_MOMENTUM_PENALTY*np.abs(h_total_combined_com)/self.AT_MAX_ANGULAR_MOMENTUM
-                        
-            if self.test_time:
-                print("Docking successful! Reward given: %.1f; distance: %.3f m -> Relative ee velocity: %.3f m/s; penalty: %.1f -> Docking angle error: %.2f deg; penalty: %.1f -> EE angular rate error: %.3f; penalty %.1f -> Combined angular momentum: %.3f Nms; penalty: %.1f, Postcapture angular rate %.2f deg/s; Precapture target angular rate: %.2f deg/s" %(reward, np.linalg.norm(self.end_effector_position - self.docking_port_position), np.linalg.norm(docking_relative_velocity), np.maximum(0, np.linalg.norm(docking_relative_velocity) - self.ALLOWED_EE_COLLISION_VELOCITY) * self.DOCKING_EE_VELOCITY_PENALTY, docking_angle_error*180/np.pi, np.abs(np.sin(docking_angle_error/2)) * self.MAX_DOCKING_ANGLE_PENALTY,np.abs(self.chaser_velocity[-1] - self.target_velocity[-1]),np.maximum(0, np.abs(end_effector_angular_velocity - self.target_velocity[-1]) - self.ALLOWED_EE_COLLISION_ANGULAR_VELOCITY) * self.DOCKING_ANGULAR_VELOCITY_PENALTY, h_total_combined_com, self.ANGULAR_MOMENTUM_PENALTY*np.abs(h_total_combined_com)/self.AT_MAX_ANGULAR_MOMENTUM, combined_angular_velocity, self.target_velocity[-1]*180/np.pi))
-        
-        
-        # Give a reward for passing a "mid-way" mark
-        if self.GIVE_MID_WAY_REWARD and self.not_yet_mid_way and self.mid_way:
-            if self.test_time:
-                print("Just passed the mid-way mark. Distance: %.3f at time %.1f" %(np.linalg.norm(self.end_effector_position - self.docking_port_position), self.time))
-            self.not_yet_mid_way = False
-            reward += self.MID_WAY_REWARD
-        
-        # Giving a penalty for colliding with the target. These booleans are updated in self.check_collisions()
-        if self.chaser_target_collision:
+        # Giving a penalty for colliding with the target
+        if np.linalg.norm(self.state[:self.POSITION_STATE_LENGTH-1] - self.target_location[:-1]) <= self.TARGET_COLLISION_DISTANCE:
             reward -= self.TARGET_COLLISION_PENALTY
-        
-        if self.end_effector_collision:
-            reward -= self.END_EFFECTOR_COLLISION_PENALTY
-        
-        if self.forbidden_area_collision:
-            reward -= self.END_EFFECTOR_COLLISION_PENALTY
             
-        if self.elbow_target_collision:
-            reward -= self.END_EFFECTOR_COLLISION_PENALTY
-        
-        # Give a penalty when an arm segment reaches its limit
-        if np.any(self.joints_past_limits):
-            reward -= self.ARM_LIMIT_PENALTY*np.sum(self.joints_past_limits)            
-        
-        # If we've fallen off the table or rotated too much, penalize this behaviour
-        if (not(self.chaser_on_table) or np.abs(self.chaser_position[-1]) > 6*np.pi) and self.END_ON_FALL:
-            reward -= self.FALL_OFF_TABLE_PENALTY
-        
-        return reward
+        # Giving a penalty for high velocities near the target location
+        if self.PENALIZE_VELOCITY:
+            radius = np.linalg.norm(desired_location[:2]- self.target_location[:2]) # vector from the target to the desired location
+            reference_velocity = self.TARGET_ANGULAR_VELOCITY*np.array([-radius*np.sin(self.target_location[2]), radius*np.cos(self.target_location[2]), 1])
+            reward -= np.sum(np.abs(action - reference_velocity)/(self.pose_error()**2+0.01)*self.VELOCITY_PENALTY)
+
+        # Multiplying the reward by the TIMESTEP to give the rewards on a per-second basis
+        return (reward*self.TIMESTEP).squeeze()
     
     def check_collisions(self):
         """ Calculate whether the different objects are colliding with the target.
@@ -1177,7 +1173,7 @@ def dynamics_equations_of_motion(chaser_state, t, parameters):
     x, y, theta, theta_1, theta_2, theta_3, x_dot, y_dot, theta_dot, theta_1_dot, theta_2_dot, theta_3_dot = chaser_state
     
     # state = x, y, theta, theta_1, theta_2, theta_3
-    state_dot = np.array([x_dot, y_dot, theta_dot, theta_1_dot, theta_2_dot, theta_3_dot]).reshape([6,1])
+    state_dot = np.array([x_dot, y_dot, theta_dot, 0, 0, 0]).reshape([6,1])
 
     control_effort, LENGTH, PHI, B0, \
     MASS, M1, M2, M3, \
@@ -1190,11 +1186,15 @@ def dynamics_equations_of_motion(chaser_state, t, parameters):
     # Generate the coriolis matrix for this state
     CoriolisMatrix = calculate_coriolis_matrix(chaser_state, t, parameters)
     
+    
     second_derivatives = np.matmul(np.linalg.inv(MassMatrix),(control_effort - np.matmul(CoriolisMatrix, state_dot)))
 
-    first_derivatives = np.array([x_dot, y_dot, theta_dot, theta_1_dot, theta_2_dot, theta_3_dot]).reshape([6,1])
+    first_derivatives = np.array([x_dot, y_dot, theta_dot, 0, 0, 0]).reshape([6,1])
     
     full_derivative = np.concatenate([first_derivatives, second_derivatives]).squeeze()
+    # Simplified double-integrator dynamics
+    #print("Replace INERTIA with the proper combined base+manipulator inertia")
+    #derivatives = np.array((x_dot, y_dot, theta_dot, control_effort[0]/(MASS+M1+M2+M3), control_effort[1]/(MASS+M1+M2+M3), control_effort[2]/INERTIA)).squeeze()
     
     return full_derivative
 
@@ -1324,12 +1324,15 @@ def calculate_mass_matrix(chaser_state, t, parameters):
     t114 = INERTIA2+INERTIA3+t51+t67+t68+t70+t74+t77+t85+t107
     t115 = INERTIA3+t70+t85+t111
     t116 = INERTIA3+t70+t111
-    MassMatrix = np.array([t17,0.0,t30,-t86-t87-t88,-t88-t13*t28,-t88,
-                           0.0,t17,t33,-t89-t90-t91,-t91-t24*t28,-t91,
-                           t30,t33,INERTIA+INERTIA1+INERTIA2+INERTIA3+t46+t51+t57+t64+t65+t66+t67+t68+t70+t71+t72+t74+t75+t76+t77+t59*(A1*B0*M1*2.0+A1*B0*M2*2.0+A1*B0*M3*2.0+B0*B1*M2*2.0+B0*B1*M3*2.0)+M1*t36+M2*t36+M3*t36-t61*(A2*B0*M2*2.0+A2*B0*M3*2.0+B0*B2*M3*2.0)-A3*B0*M3*t63*2.0,t99,INERTIA2+INERTIA3+t51+t67+t68+t70+t74+t77+t85+t107-t112-t113,INERTIA3+t70+t85+t111-t113,
-                           -t7*t8-t13*t14-A3*M3*t16,-t8*t23-t14*t24-A3*M3*t25,t99,INERTIA1+INERTIA2+INERTIA3+t46+t51+t57+t64+t65+t66+t67+t68+t70+t71+t72+t74+t75+t76+t77,t114,t115,
-                           -t13*t28-A3*M3*t16,-t24*t28-A3*M3*t25,INERTIA2+INERTIA3+t51+t67+t68+t70+t74+t77+t85+t107-t61*t81-A3*B0*M3*t63,t114,INERTIA2+INERTIA3+t51+t67+t68+t70+t74+t77,t116,
-                           -A3*M3*t16,-A3*M3*t25,INERTIA3+t70+t85+t111-A3*B0*M3*t63,t115,t116,INERTIA3+t70]).reshape([6,6], order ='F') # default order is different from matlab
+    # MassMatrix = np.array([t17,0.0,t30,-t86-t87-t88,-t88-t13*t28,-t88,
+    #                        0.0,t17,t33,-t89-t90-t91,-t91-t24*t28,-t91,
+    #                        t30,t33,INERTIA+INERTIA1+INERTIA2+INERTIA3+t46+t51+t57+t64+t65+t66+t67+t68+t70+t71+t72+t74+t75+t76+t77+t59*(A1*B0*M1*2.0+A1*B0*M2*2.0+A1*B0*M3*2.0+B0*B1*M2*2.0+B0*B1*M3*2.0)+M1*t36+M2*t36+M3*t36-t61*(A2*B0*M2*2.0+A2*B0*M3*2.0+B0*B2*M3*2.0)-A3*B0*M3*t63*2.0,t99,INERTIA2+INERTIA3+t51+t67+t68+t70+t74+t77+t85+t107-t112-t113,INERTIA3+t70+t85+t111-t113,
+    #                        -t7*t8-t13*t14-A3*M3*t16,-t8*t23-t14*t24-A3*M3*t25,t99,INERTIA1+INERTIA2+INERTIA3+t46+t51+t57+t64+t65+t66+t67+t68+t70+t71+t72+t74+t75+t76+t77,t114,t115,
+    #                        -t13*t28-A3*M3*t16,-t24*t28-A3*M3*t25,INERTIA2+INERTIA3+t51+t67+t68+t70+t74+t77+t85+t107-t61*t81-A3*B0*M3*t63,t114,INERTIA2+INERTIA3+t51+t67+t68+t70+t74+t77,t116,
+    #                        -A3*M3*t16,-A3*M3*t25,INERTIA3+t70+t85+t111-A3*B0*M3*t63,t115,t116,INERTIA3+t70]).reshape([6,6], order ='F') # default order is different from matlab
+    MassMatrix = np.array([[t17,0,0,0,0,0],[0,t17,0,0,0,0],[0,0,INERTIA+INERTIA1+INERTIA2+INERTIA3+t46+t51+t57+t64+t65+t66+t67+t68+t70+t71+t72+t74+t75+t76+t77+t59*(A1*B0*M1*2.0+A1*B0*M2*2.0+A1*B0*M3*2.0+B0*B1*M2*2.0+B0*B1*M3*2.0)+M1*t36+M2*t36+M3*t36-t61*(A2*B0*M2*2.0+A2*B0*M3*2.0+B0*B2*M3*2.0)-A3*B0*M3*t63*2.0,0,0,0],[0,0,0,1,0,0],[0,0,0,0,1,0],[0,0,0,0,0,1]])
+    print("Finish inertia calculation here!")
+    
     return MassMatrix
 
 
@@ -1343,142 +1346,143 @@ def calculate_coriolis_matrix(chaser_state, t, parameters):
     INERTIA, INERTIA1, INERTIA2, INERTIA3 = parameters # Unpacking parameters
 
     # Generating coriolis matrix using Alex's equations from CoriolisFinc3LINK
-    t2 = A1+B1
-    t3 = A1*M1
-    t4 = M2*t2
-    t5 = M3*t2
-    t6 = t3+t4+t5
-    t7 = A2*M2
-    t8 = A2+B2
-    t9 = M3*t8
-    t10 = t7+t9
-    t11 = np.pi*(10/20)
-    t12 = theta_dot*t6
-    t13 = theta_1_dot*t6
-    t14 = theta+theta_1+t11
-    t15 = np.cos(t14)
-    t16 = t12+t13
-    t17 = theta_dot*t10
-    t18 = theta_1_dot*t10
-    t19 = theta_2_dot*t10
-    t20 = theta+theta_1+theta_2+t11
-    t21 = np.cos(t20)
-    t22 = t17+t18+t19
-    t23 = A3*M3*theta_dot
-    t24 = A3*M3*theta_1_dot
-    t25 = A3*M3*theta_2_dot
-    t26 = A3*M3*theta_3_dot
-    t27 = theta+theta_1+theta_2+theta_3+t11
-    t28 = np.cos(t27)
-    t29 = t23+t24+t25+t26
-    t30 = B0*M1
-    t31 = B0*M2
-    t32 = B0*M3
-    t33 = t30+t31+t32
-    t34 = PHI+theta
-    t35 = np.sin(t14)
-    t36 = np.sin(t20)
-    t37 = np.sin(t27)
-    t38 = theta_dot+theta_1_dot+theta_2_dot+theta_3_dot
-    t39 = theta+theta_1+theta_2+theta_3
-    t40 = A1*B0*M1*theta_1_dot
-    t41 = A1*B0*M2*theta_1_dot
-    t42 = A1*B0*M3*theta_1_dot
-    t43 = B0*B1*M2*theta_1_dot
-    t44 = B0*B1*M3*theta_1_dot
-    t45 = PHI-theta_1
-    t46 = np.cos(t45)
-    t47 = A2*B0*M2*theta_1_dot
-    t48 = A2*B0*M2*theta_2_dot
-    t49 = A2*B0*M3*theta_1_dot
-    t50 = A2*B0*M3*theta_2_dot
-    t51 = B0*B2*M3*theta_1_dot
-    t52 = B0*B2*M3*theta_2_dot
-    t53 = -PHI+theta_1+theta_2
-    t54 = np.cos(t53)
-    t55 = A3*B0*M3*theta_1_dot
-    t56 = A3*B0*M3*theta_2_dot
-    t57 = A3*B0*M3*theta_3_dot
-    t58 = -PHI+theta_1+theta_2+theta_3
-    t59 = np.cos(t58)
-    t60 = A2*B1*M2*theta_2_dot
-    t61 = A1*B2*M3*theta_2_dot
-    t62 = A2*B1*M3*theta_2_dot
-    t63 = B1*B2*M3*theta_2_dot
-    t64 = A1*A2*M2*theta_2_dot
-    t65 = A1*A2*M3*theta_2_dot
-    t66 = np.sin(theta_2)
-    t67 = t60+t61+t62+t63+t64+t65
-    t68 = A3*B2*M3*theta_3_dot
-    t69 = A2*A3*M3*theta_3_dot
-    t70 = np.sin(theta_3)
-    t71 = t68+t69
-    t72 = A3*B1*M3*theta_2_dot
-    t73 = A3*B1*M3*theta_3_dot
-    t74 = A1*A3*M3*theta_2_dot
-    t75 = A1*A3*M3*theta_3_dot
-    t76 = theta_2+theta_3
-    t77 = np.sin(t76)
-    t78 = t72+t73+t74+t75
-    t79 = A2*B0*M2*theta_dot
-    t80 = A2*B0*M3*theta_dot
-    t81 = B0*B2*M3*theta_dot
-    t82 = t47+t48+t49+t50+t51+t52+t79+t80+t81
-    t83 = A3*B0*M3*theta_dot
-    t84 = t55+t56+t57+t83
-    t85 = A1*B0*M1*theta_dot
-    t86 = A1*B0*M2*theta_dot
-    t87 = A1*B0*M3*theta_dot
-    t88 = B0*B1*M2*theta_dot
-    t89 = B0*B1*M3*theta_dot
-    t90 = A2*B1*M2*theta_dot
-    t91 = A1*B2*M3*theta_dot
-    t92 = A2*B1*M2*theta_1_dot
-    t93 = A2*B1*M3*theta_dot
-    t94 = A1*B2*M3*theta_1_dot
-    t95 = A2*B1*M3*theta_1_dot
-    t96 = B1*B2*M3*theta_dot
-    t97 = B1*B2*M3*theta_1_dot
-    t98 = A1*A2*M2*theta_dot
-    t99 = A1*A2*M2*theta_1_dot
-    t100 = A1*A2*M3*theta_dot
-    t101 = A1*A2*M3*theta_1_dot
-    t102 = t60+t61+t62+t63+t64+t65+t90+t91+t92+t93+t94+t95+t96+t97+t98+t99+t100+t101
-    t103 = A3*B1*M3*theta_dot
-    t104 = A3*B1*M3*theta_1_dot
-    t105 = A1*A3*M3*theta_dot
-    t106 = A1*A3*M3*theta_1_dot
-    t107 = t72+t73+t74+t75+t103+t104+t105+t106
-    t108 = t79+t80+t81
-    t109 = t54*t108
-    t110 = t59*t83
-    t111 = t90+t91+t92+t93+t94+t95+t96+t97+t98+t99+t100+t101
-    t112 = t66*t111
-    t113 = t103+t104+t105+t106
-    t114 = t77*t113
-    t115 = A2*theta_dot
-    t116 = A2*theta_1_dot
-    t117 = A2*theta_2_dot
-    t118 = B2*theta_dot
-    t119 = B2*theta_1_dot
-    t120 = B2*theta_2_dot
-    t121 = t115+t116+t117+t118+t119+t120
-    t122 = A3*M3*t70*t121
-    t123 = A1*theta_dot
-    t124 = A1*theta_1_dot
-    t125 = B1*theta_dot
-    t126 = B1*theta_1_dot
-    t127 = t123+t124+t125+t126
-    t128 = A3*M3*t77*t127
+    # t2 = A1+B1
+    # t3 = A1*M1
+    # t4 = M2*t2
+    # t5 = M3*t2
+    # t6 = t3+t4+t5
+    # t7 = A2*M2
+    # t8 = A2+B2
+    # t9 = M3*t8
+    # t10 = t7+t9
+    # t11 = np.pi*(10/20)
+    # t12 = theta_dot*t6
+    # t13 = theta_1_dot*t6
+    # t14 = theta+theta_1+t11
+    # t15 = np.cos(t14)
+    # t16 = t12+t13
+    # t17 = theta_dot*t10
+    # t18 = theta_1_dot*t10
+    # t19 = theta_2_dot*t10
+    # t20 = theta+theta_1+theta_2+t11
+    # t21 = np.cos(t20)
+    # t22 = t17+t18+t19
+    # t23 = A3*M3*theta_dot
+    # t24 = A3*M3*theta_1_dot
+    # t25 = A3*M3*theta_2_dot
+    # t26 = A3*M3*theta_3_dot
+    # t27 = theta+theta_1+theta_2+theta_3+t11
+    # t28 = np.cos(t27)
+    # t29 = t23+t24+t25+t26
+    # t30 = B0*M1
+    # t31 = B0*M2
+    # t32 = B0*M3
+    # t33 = t30+t31+t32
+    # t34 = PHI+theta
+    # t35 = np.sin(t14)
+    # t36 = np.sin(t20)
+    # t37 = np.sin(t27)
+    # t38 = theta_dot+theta_1_dot+theta_2_dot+theta_3_dot
+    # t39 = theta+theta_1+theta_2+theta_3
+    # t40 = A1*B0*M1*theta_1_dot
+    # t41 = A1*B0*M2*theta_1_dot
+    # t42 = A1*B0*M3*theta_1_dot
+    # t43 = B0*B1*M2*theta_1_dot
+    # t44 = B0*B1*M3*theta_1_dot
+    # t45 = PHI-theta_1
+    # t46 = np.cos(t45)
+    # t47 = A2*B0*M2*theta_1_dot
+    # t48 = A2*B0*M2*theta_2_dot
+    # t49 = A2*B0*M3*theta_1_dot
+    # t50 = A2*B0*M3*theta_2_dot
+    # t51 = B0*B2*M3*theta_1_dot
+    # t52 = B0*B2*M3*theta_2_dot
+    # t53 = -PHI+theta_1+theta_2
+    # t54 = np.cos(t53)
+    # t55 = A3*B0*M3*theta_1_dot
+    # t56 = A3*B0*M3*theta_2_dot
+    # t57 = A3*B0*M3*theta_3_dot
+    # t58 = -PHI+theta_1+theta_2+theta_3
+    # t59 = np.cos(t58)
+    # t60 = A2*B1*M2*theta_2_dot
+    # t61 = A1*B2*M3*theta_2_dot
+    # t62 = A2*B1*M3*theta_2_dot
+    # t63 = B1*B2*M3*theta_2_dot
+    # t64 = A1*A2*M2*theta_2_dot
+    # t65 = A1*A2*M3*theta_2_dot
+    # t66 = np.sin(theta_2)
+    # t67 = t60+t61+t62+t63+t64+t65
+    # t68 = A3*B2*M3*theta_3_dot
+    # t69 = A2*A3*M3*theta_3_dot
+    # t70 = np.sin(theta_3)
+    # t71 = t68+t69
+    # t72 = A3*B1*M3*theta_2_dot
+    # t73 = A3*B1*M3*theta_3_dot
+    # t74 = A1*A3*M3*theta_2_dot
+    # t75 = A1*A3*M3*theta_3_dot
+    # t76 = theta_2+theta_3
+    # t77 = np.sin(t76)
+    # t78 = t72+t73+t74+t75
+    # t79 = A2*B0*M2*theta_dot
+    # t80 = A2*B0*M3*theta_dot
+    # t81 = B0*B2*M3*theta_dot
+    # t82 = t47+t48+t49+t50+t51+t52+t79+t80+t81
+    # t83 = A3*B0*M3*theta_dot
+    # t84 = t55+t56+t57+t83
+    # t85 = A1*B0*M1*theta_dot
+    # t86 = A1*B0*M2*theta_dot
+    # t87 = A1*B0*M3*theta_dot
+    # t88 = B0*B1*M2*theta_dot
+    # t89 = B0*B1*M3*theta_dot
+    # t90 = A2*B1*M2*theta_dot
+    # t91 = A1*B2*M3*theta_dot
+    # t92 = A2*B1*M2*theta_1_dot
+    # t93 = A2*B1*M3*theta_dot
+    # t94 = A1*B2*M3*theta_1_dot
+    # t95 = A2*B1*M3*theta_1_dot
+    # t96 = B1*B2*M3*theta_dot
+    # t97 = B1*B2*M3*theta_1_dot
+    # t98 = A1*A2*M2*theta_dot
+    # t99 = A1*A2*M2*theta_1_dot
+    # t100 = A1*A2*M3*theta_dot
+    # t101 = A1*A2*M3*theta_1_dot
+    # t102 = t60+t61+t62+t63+t64+t65+t90+t91+t92+t93+t94+t95+t96+t97+t98+t99+t100+t101
+    # t103 = A3*B1*M3*theta_dot
+    # t104 = A3*B1*M3*theta_1_dot
+    # t105 = A1*A3*M3*theta_dot
+    # t106 = A1*A3*M3*theta_1_dot
+    # t107 = t72+t73+t74+t75+t103+t104+t105+t106
+    # t108 = t79+t80+t81
+    # t109 = t54*t108
+    # t110 = t59*t83
+    # t111 = t90+t91+t92+t93+t94+t95+t96+t97+t98+t99+t100+t101
+    # t112 = t66*t111
+    # t113 = t103+t104+t105+t106
+    # t114 = t77*t113
+    # t115 = A2*theta_dot
+    # t116 = A2*theta_1_dot
+    # t117 = A2*theta_2_dot
+    # t118 = B2*theta_dot
+    # t119 = B2*theta_1_dot
+    # t120 = B2*theta_2_dot
+    # t121 = t115+t116+t117+t118+t119+t120
+    # t122 = A3*M3*t70*t121
+    # t123 = A1*theta_dot
+    # t124 = A1*theta_1_dot
+    # t125 = B1*theta_dot
+    # t126 = B1*theta_1_dot
+    # t127 = t123+t124+t125+t126
+    # t128 = A3*M3*t77*t127
 
-    # Assembling the matrix
-    CoriolisMatrix = np.array([0.0,0.0,0.0,0.0,0.0,0.0,
-                               0.0,0.0,0.0,0.0,0.0,0.0,
-                               -t15*t16-t21*t22-t28*t29-theta_dot*t33*np.cos(t34),-t16*t35-t22*t36-t29*t37-theta_dot*t33*np.sin(t34),-t66*t67-t70*t71-t77*t78-t46*(t40+t41+t42+t43+t44)-t59*(t55+t56+t57)-t54*(t47+t48+t49+t50+t51+t52),t109+t110-t66*t67-t70*t71-t77*t78+t46*(t85+t86+t87+t88+t89),t109+t110+t112+t114-t70*t71,t110+t122+t128,
-                               -t15*t16-t21*t22-t28*t29,-t16*t35-t22*t36-t29*t37,-t66*t67-t54*t82-t70*t71-t59*t84-t77*t78-t46*(t40+t41+t42+t43+t44+t85+t86+t87+t88+t89),-t66*t67-t70*t71-t77*t78,t112+t114-t70*t71,t122+t128,
-                               -t21*t22-t28*t29,-t22*t36-t29*t37,-t54*t82-t70*t71-t59*t84-t66*t102-t77*t107,-t70*t71-t66*t102-t77*t107,-A3*M3*theta_3_dot*t8*t70,A3*M3*t8*t70*(theta_dot+theta_1_dot+theta_2_dot),
-                               A3*M3*t38*np.sin(t39),-A3*M3*t38*np.cos(t39),-A3*B0*M3*t38*t59-A3*M3*t8*t38*t70-A3*M3*t2*t38*t77,-A3*M3*t8*t38*t70-A3*M3*t2*t38*t77,-A3*M3*t8*t38*t70,00]).reshape([6,6], order='F') # default order is different than matlab
-    return CoriolisMatrix
+    # # Assembling the matrix
+    # CoriolisMatrix = np.array([0.0,0.0,0.0,0.0,0.0,0.0,
+    #                            0.0,0.0,0.0,0.0,0.0,0.0,
+    #                            -t15*t16-t21*t22-t28*t29-theta_dot*t33*np.cos(t34),-t16*t35-t22*t36-t29*t37-theta_dot*t33*np.sin(t34),-t66*t67-t70*t71-t77*t78-t46*(t40+t41+t42+t43+t44)-t59*(t55+t56+t57)-t54*(t47+t48+t49+t50+t51+t52),t109+t110-t66*t67-t70*t71-t77*t78+t46*(t85+t86+t87+t88+t89),t109+t110+t112+t114-t70*t71,t110+t122+t128,
+    #                            -t15*t16-t21*t22-t28*t29,-t16*t35-t22*t36-t29*t37,-t66*t67-t54*t82-t70*t71-t59*t84-t77*t78-t46*(t40+t41+t42+t43+t44+t85+t86+t87+t88+t89),-t66*t67-t70*t71-t77*t78,t112+t114-t70*t71,t122+t128,
+    #                            -t21*t22-t28*t29,-t22*t36-t29*t37,-t54*t82-t70*t71-t59*t84-t66*t102-t77*t107,-t70*t71-t66*t102-t77*t107,-A3*M3*theta_3_dot*t8*t70,A3*M3*t8*t70*(theta_dot+theta_1_dot+theta_2_dot),
+    #                            A3*M3*t38*np.sin(t39),-A3*M3*t38*np.cos(t39),-A3*B0*M3*t38*t59-A3*M3*t8*t38*t70-A3*M3*t2*t38*t77,-A3*M3*t8*t38*t70-A3*M3*t2*t38*t77,-A3*M3*t8*t38*t70,00]).reshape([6,6], order='F') # default order is different than matlab
+    # return CoriolisMatrix
+    return np.zeros([6,6])
 
 
 ##########################################

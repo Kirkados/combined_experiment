@@ -137,7 +137,7 @@ class Environment:
                                                           # [m, m, rad, m/s, m/s, rad/s, rad, rad, rad, rad/s, rad/s, rad/s, m, m, rad, m/s, m/s, rad/s, m, m, m/s, m/s, m, m, rad, m, m, m/s, m/s] // Upper bound for each element of TOTAL_STATE
         self.INITIAL_CHASER_POSITION          = np.array([self.MAX_X_POSITION/3, self.MAX_Y_POSITION/2, 0.0]) # [m, m, rad]
         self.INITIAL_CHASER_VELOCITY          = np.array([0.0,  0.0, 0.0]) # [m/s, m/s, rad/s]
-        self.INITIAL_ARM_ANGLES               = np.array([0.0,  0.0, 0.0]) # [rad, rad, rad]
+        self.INITIAL_ARM_ANGLES               = np.array([-np.pi/2, -1.1344 , 1.0471]) # [rad, rad, rad]
         self.INITIAL_ARM_RATES                = np.array([0.0,  0.0, 0.0]) # [rad/s, rad/s, rad/s]
         #self.INITIAL_TARGET_POSITION          = np.array([self.MAX_X_POSITION/2, self.MAX_Y_POSITION/2, 0.0]) # [m, m, rad]
         self.INITIAL_TARGET_POSITION          = np.array([self.MAX_X_POSITION*2/3, self.MAX_Y_POSITION/2, 0.0]) # [m, m, rad]
@@ -207,7 +207,7 @@ class Environment:
         
         # NEW (Combined experiment) reward function properties
         self.TARGET_REWARD            =   1. # reward per second
-        self.FALL_OFF_TABLE_PENALTY   =   0.
+        self.FALL_OFF_TABLE_PENALTY   =   00.
         self.END_ON_FALL              = False # end episode on a fall off the table
         self.GOAL_REWARD              =   0.
         self.NEGATIVE_PENALTY_FACTOR  = 1.5 # How much of a factor to additionally penalize negative rewards
@@ -216,6 +216,7 @@ class Environment:
         self.REWARD_TYPE              = True # True = Linear; False = Exponential
         self.REWARD_WEIGHTING         = [0.5, 0.5, 0.1] # How much to weight the rewards in the state
         self.REWARD_MULTIPLIER        = 250 # how much to multiply the differential reward by
+        self.HOLD_POINT_RADIUS        = 1.5 # [m] 
         
         
         # Old (Phase 3) Reward function properties
@@ -241,6 +242,13 @@ class Environment:
         self.AT_MAX_ANGULAR_MOMENTUM               = 10000 # [kg m^2/s] which is given at this angular momentum
         self.END_ON_ARM_LIMITS                     = False # Whether or not to end the episode when an arm link reaches its limit
         self.ARM_LIMIT_PENALTY                     = 0 #[rewards/timestep/link] Penalty for manipulator joints reaching their limits
+        
+        # Obstacle properties
+        self.USE_OBSTACLE              = False # Also change self.IRRELEVANT_STATES
+        self.OBSTABLE_PENALTY          = 0 # [rewards/second] How bad is it to collide with the obstacle?
+        self.OBSTABLE_DISTANCE         = 0. # [m] radius of which the obstacle penalty will be applied
+        self.OBSTACLE_INITIAL_POSITION = np.array([0, 0]) # [m]
+        self.OBSTABLE_VELOCITY         = np.array([0.0 , 0.0]) # [m/s]
         
         
         # Some calculations that don't need to be changed
@@ -318,6 +326,15 @@ class Environment:
         
         # Update relative pose
         self.update_relative_pose_body_frame()
+        
+        # Hold point location
+        self.hold_point = self.target_position + np.array([np.cos(self.target_position[2])*(self.HOLD_POINT_RADIUS), np.sin(self.target_position[2])*(self.HOLD_POINT_RADIUS), 0])
+
+        # Resetting the differential reward
+        self.previous_position_reward = [None, None, None]
+        
+        # Obstacle initial location (not randomized)
+        self.obstacle_location = np.array([0,0])
         
         # Check for collisions
         self.check_collisions()
@@ -678,7 +695,7 @@ class Environment:
             print("Current, Desired, Unclipped, Clipped\n", np.concatenate([current_accelerations.reshape([1,-1]), desired_accelerations.reshape([1,-1]), unclipped.reshape([1, -1]), control_effort.reshape([1,-1])], axis=0))
         else:
             control_effort = np.clip(control_effort, -limits, limits)
-            print(control_effort)
+            #print(control_effort)
             #pass
             
         # [F_x, F_y, torque, torque1, torque2, torque3]
@@ -896,10 +913,10 @@ class Environment:
         # Calculates a reward map
         if self.REWARD_TYPE:
             # Linear reward
-            current_position_reward = -np.abs((desired_location - self.state[:self.POSITION_STATE_LENGTH])*self.REWARD_WEIGHTING)* self.TARGET_REWARD
+            current_position_reward = -np.abs((desired_location - self.chaser_position)*self.REWARD_WEIGHTING)* self.TARGET_REWARD
         else:
             # Exponential reward
-            current_position_reward = np.exp(-np.sum(np.absolute(desired_location - self.state[:self.POSITION_STATE_LENGTH])*self.REWARD_WEIGHTING)) * self.TARGET_REWARD
+            current_position_reward = np.exp(-np.sum(np.absolute(desired_location - self.chaser_position[:self.POSITION_STATE_LENGTH])*self.REWARD_WEIGHTING)) * self.TARGET_REWARD
 
         reward = np.zeros(1)
 
@@ -920,26 +937,29 @@ class Environment:
             reward -= self.DOCKING_TOO_FAST_PENALTY
 
         # Giving a massive penalty for falling off the table
-        if self.state[0] > self.UPPER_STATE_BOUND[0] or self.state[0] < self.LOWER_STATE_BOUND[0] or self.state[1] > self.UPPER_STATE_BOUND[1] or self.state[1] < self.LOWER_STATE_BOUND[1]:
+        if self.chaser_position[0] > self.UPPER_STATE_BOUND[0] or self.chaser_position[0] < self.LOWER_STATE_BOUND[0] or self.chaser_position[1] > self.UPPER_STATE_BOUND[1] or self.chaser_position[1] < self.LOWER_STATE_BOUND[1]:
             reward -= self.FALL_OFF_TABLE_PENALTY/self.TIMESTEP
 
         # Giving a large reward for completing the task
-        if np.sum(np.absolute(self.state[:self.POSITION_STATE_LENGTH] - desired_location)) < 0.01:
+        if np.sum(np.absolute(self.chaser_position - desired_location)) < 0.01:
             reward += self.GOAL_REWARD
             
         # Giving a large penalty for colliding with the obstacle
-        if np.linalg.norm(self.state[:self.POSITION_STATE_LENGTH-1] - self.obstacle_location) <= self.OBSTABLE_DISTANCE and self.USE_OBSTACLE:
+        if np.linalg.norm(self.chaser_position[:-1] - self.obstacle_location) <= self.OBSTABLE_DISTANCE and self.USE_OBSTACLE:
             reward -= self.OBSTABLE_PENALTY
             
-        # Giving a penalty for colliding with the target
-        if np.linalg.norm(self.state[:self.POSITION_STATE_LENGTH-1] - self.target_location[:-1]) <= self.TARGET_COLLISION_DISTANCE:
+        # Giving a penalty for colliding with the target. These booleans are updated in self.check_collisions()
+        if self.chaser_target_collision:
             reward -= self.TARGET_COLLISION_PENALTY
+        
+        if self.end_effector_collision:
+            reward -= self.END_EFFECTOR_COLLISION_PENALTY
+        
+        if self.forbidden_area_collision:
+            reward -= self.END_EFFECTOR_COLLISION_PENALTY
             
-        # Giving a penalty for high velocities near the target location
-        if self.PENALIZE_VELOCITY:
-            radius = np.linalg.norm(desired_location[:2]- self.target_location[:2]) # vector from the target to the desired location
-            reference_velocity = self.TARGET_ANGULAR_VELOCITY*np.array([-radius*np.sin(self.target_location[2]), radius*np.cos(self.target_location[2]), 1])
-            reward -= np.sum(np.abs(action - reference_velocity)/(self.pose_error()**2+0.01)*self.VELOCITY_PENALTY)
+        if self.elbow_target_collision:
+            reward -= self.END_EFFECTOR_COLLISION_PENALTY
 
         # Multiplying the reward by the TIMESTEP to give the rewards on a per-second basis
         return (reward*self.TIMESTEP).squeeze()
@@ -1331,7 +1351,8 @@ def calculate_mass_matrix(chaser_state, t, parameters):
     #                        -t13*t28-A3*M3*t16,-t24*t28-A3*M3*t25,INERTIA2+INERTIA3+t51+t67+t68+t70+t74+t77+t85+t107-t61*t81-A3*B0*M3*t63,t114,INERTIA2+INERTIA3+t51+t67+t68+t70+t74+t77,t116,
     #                        -A3*M3*t16,-A3*M3*t25,INERTIA3+t70+t85+t111-A3*B0*M3*t63,t115,t116,INERTIA3+t70]).reshape([6,6], order ='F') # default order is different from matlab
     MassMatrix = np.array([[t17,0,0,0,0,0],[0,t17,0,0,0,0],[0,0,INERTIA+INERTIA1+INERTIA2+INERTIA3+t46+t51+t57+t64+t65+t66+t67+t68+t70+t71+t72+t74+t75+t76+t77+t59*(A1*B0*M1*2.0+A1*B0*M2*2.0+A1*B0*M3*2.0+B0*B1*M2*2.0+B0*B1*M3*2.0)+M1*t36+M2*t36+M3*t36-t61*(A2*B0*M2*2.0+A2*B0*M3*2.0+B0*B2*M3*2.0)-A3*B0*M3*t63*2.0,0,0,0],[0,0,0,1,0,0],[0,0,0,0,1,0],[0,0,0,0,0,1]])
-    print("Finish inertia calculation here!")
+    
+    #print("Finish inertia calculation here!")
     
     return MassMatrix
 
@@ -1608,7 +1629,8 @@ def render(states, actions, instantaneous_reward_log, cumulative_reward_log, cri
     target_front_face_inertial = np.matmul(C_Ib_target, target_front_face_body) + np.array([target_x, target_y]).T.reshape([-1,2,1])
     
     # Calculating the accelerations for each state through time
-    velocities = np.concatenate([states[:,3:6],states[:,9:12]], axis = 1) # Velocities measured in the inertial frame
+    #velocities = np.concatenate([states[:,3:6],states[:,9:12]], axis = 1) # Velocities measured in the inertial frame
+    velocities = states[:,3:6] # Velocities measured in the inertial frame
     # Numerically differentiating to approximate the derivative
     accelerations = np.diff(velocities, axis = 0)/temp_env.TIMESTEP
     # Add a row of zeros initially to the current acceleartions
@@ -1713,9 +1735,9 @@ def render(states, actions, instantaneous_reward_log, cumulative_reward_log, cri
         control1_text     = subfig1.text(x = 0.01, y = 0.90, s = '', fontsize = 6, transform=subfig1.transAxes)
         control2_text     = subfig1.text(x = 0.01, y = 0.85, s = '', fontsize = 6, transform=subfig1.transAxes)
         control3_text     = subfig1.text(x = 0.01, y = 0.80, s = '', fontsize = 6, transform=subfig1.transAxes)
-        control4_text     = subfig1.text(x = 0.01, y = 0.75, s = '', fontsize = 6, transform=subfig1.transAxes)
-        control5_text     = subfig1.text(x = 0.01, y = 0.70, s = '', fontsize = 6, transform=subfig1.transAxes)
-        control6_text     = subfig1.text(x = 0.01, y = 0.65, s = '', fontsize = 6, transform=subfig1.transAxes)
+        #control4_text     = subfig1.text(x = 0.01, y = 0.75, s = '', fontsize = 6, transform=subfig1.transAxes)
+        #control5_text     = subfig1.text(x = 0.01, y = 0.70, s = '', fontsize = 6, transform=subfig1.transAxes)
+        #control6_text     = subfig1.text(x = 0.01, y = 0.65, s = '', fontsize = 6, transform=subfig1.transAxes)
         
         
         
@@ -1723,34 +1745,34 @@ def render(states, actions, instantaneous_reward_log, cumulative_reward_log, cri
 
     # Function called repeatedly to draw each frame
     def render_one_frame(frame, *fargs):
-
+        
         # Draw the chaser body
         chaser_body.set_data(chaser_body_inertial[frame,0,:], chaser_body_inertial[frame,1,:])
-
+        
         # Draw the front face of the chaser body in a different colour
         chaser_front_face.set_data(chaser_front_face_inertial[frame,0,:], chaser_front_face_inertial[frame,1,:])
-
+        
         # Draw the target body
         target_body.set_data(target_body_inertial[frame,0,:], target_body_inertial[frame,1,:])
-
+        
         # Draw the front face of the target body in a different colour
         target_front_face.set_data(target_front_face_inertial[frame,0,:], target_front_face_inertial[frame,1,:])
-
+        
         # Draw the manipulator
         thisx = [shoulder_x[frame], elbow_x[frame], wrist_x[frame], end_effector_x[frame]]
         thisy = [shoulder_y[frame], elbow_y[frame], wrist_y[frame], end_effector_y[frame]]
         manipulator.set_data(thisx, thisy)
-
+        
         
         
         # Update the control text
         control1_text.set_text('$\ddot{x}$ = %6.3f; true = %6.3f' %(actions[frame,0], accelerations[frame,0]))
         control2_text.set_text('$\ddot{y}$ = %6.3f; true = %6.3f' %(actions[frame,1], accelerations[frame,1]))
         control3_text.set_text(r'$\ddot{\theta}$ = %1.3f; true = %6.3f' %(actions[frame,2], accelerations[frame,2]))
-        control4_text.set_text('$\ddot{q_0}$ = %6.3f; true = %6.3f' %(actions[frame,3], accelerations[frame,3]))
-        control5_text.set_text('$\ddot{q_1}$ = %6.3f; true = %6.3f' %(actions[frame,4], accelerations[frame,4]))
-        control6_text.set_text('$\ddot{q_2}$ = %6.3f; true = %6.3f' %(actions[frame,5], accelerations[frame,5]))
-        
+        #control4_text.set_text('$\ddot{q_0}$ = %6.3f; true = %6.3f' %(actions[frame,3], accelerations[frame,3]))
+        #control5_text.set_text('$\ddot{q_1}$ = %6.3f; true = %6.3f' %(actions[frame,4], accelerations[frame,4]))
+        #control6_text.set_text('$\ddot{q_2}$ = %6.3f; true = %6.3f' %(actions[frame,5], accelerations[frame,5]))
+
         # Update the reward text
         reward_text.set_text('Total reward = %.1f' %cumulative_reward_log[frame])
         

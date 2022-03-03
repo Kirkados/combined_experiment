@@ -137,7 +137,7 @@ class Environment:
                                                           # [m, m, rad, m/s, m/s, rad/s, rad, rad, rad, rad/s, rad/s, rad/s, m, m, rad, m/s, m/s, rad/s, m, m, m/s, m/s, m, m, rad, m, m, m/s, m/s] // Upper bound for each element of TOTAL_STATE
         self.INITIAL_CHASER_POSITION          = np.array([self.MAX_X_POSITION/3, self.MAX_Y_POSITION/2, 0.0]) # [m, m, rad]
         self.INITIAL_CHASER_VELOCITY          = np.array([0.0,  0.0, 0.0]) # [m/s, m/s, rad/s]
-        self.INITIAL_ARM_ANGLES               = np.array([-np.pi/2, -1.1344 , 1.0471]) # [rad, rad, rad]
+        self.INITIAL_ARM_ANGLES               = np.array([-1.1344, -1.4835 , 1.0471]) # [rad, rad, rad]
         self.INITIAL_ARM_RATES                = np.array([0.0,  0.0, 0.0]) # [rad/s, rad/s, rad/s]
         #self.INITIAL_TARGET_POSITION          = np.array([self.MAX_X_POSITION/2, self.MAX_Y_POSITION/2, 0.0]) # [m, m, rad]
         self.INITIAL_TARGET_POSITION          = np.array([self.MAX_X_POSITION*2/3, self.MAX_Y_POSITION/2, 0.0]) # [m, m, rad]
@@ -234,8 +234,8 @@ class Environment:
         self.CHECK_END_EFFECTOR_COLLISION          = True # Whether to do collision detection on the end-effector
         self.CHECK_END_EFFECTOR_FORBIDDEN          = True # Whether to expand the collision area to include the forbidden zone
         self.END_EFFECTOR_COLLISION_PENALTY        = 0 # [rewards/timestep] Penalty for end-effector collisions (with target or optionally with the forbidden zone)
-        self.END_ON_COLLISION                      = True # Whether to end the episode upon a collision.
-        self.GIVE_MID_WAY_REWARD                   = True # Whether or not to give a reward mid-way towards the docking port to encourage the learning to move in the proper direction
+        self.END_ON_COLLISION                      = False # Whether to end the episode upon a collision.
+        self.GIVE_MID_WAY_REWARD                   = False # Whether or not to give a reward mid-way towards the docking port to encourage the learning to move in the proper direction
         self.MID_WAY_REWARD_RADIUS                 = 0 # [ms] the radius from the DOCKING_PORT_MOUNT_POSITION that the mid-way reward is given
         self.MID_WAY_REWARD                        = 0 # The value of the mid-way reward
         self.ANGULAR_MOMENTUM_PENALTY              = 0 # Max angular momentum penalty to give...

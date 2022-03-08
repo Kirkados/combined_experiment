@@ -94,7 +94,7 @@ class Environment:
         """
         self.ON_CEDAR                 = False # False for Graham, Béluga, Niagara, and RCDC
         self.ACTIONS_IN_INERTIAL      = True # Are actions being calculated in the inertial frame or body frame?
-        self.TOTAL_STATE_SIZE         = 29 # [chaser_x, chaser_y, chaser_theta, chaser_x_dot, chaser_y_dot, chaser_theta_dot, shoulder_theta, elbow_theta, wrist_theta, shoulder_theta_dot, elbow_theta_dot, wrist_theta_dot, target_x, target_y, target_theta, target_x_dot, target_y_dot, target_theta_dot, ee_x, ee_y, ee_x_dot, ee_y_dot, relative_x_b, relative_y_b, relative_theta, ee_x_b, ee_y_b, ee_x_dot_b, ee_y_dot_b]
+        self.TOTAL_STATE_SIZE         = 35 # [chaser_x, chaser_y, chaser_theta, chaser_x_dot, chaser_y_dot, chaser_theta_dot, shoulder_theta, elbow_theta, wrist_theta, shoulder_theta_dot, elbow_theta_dot, wrist_theta_dot, target_x, target_y, target_theta, target_x_dot, target_y_dot, target_theta_dot, ee_x, ee_y, ee_x_dot, ee_y_dot, relative_x_I, relative_y_I, relative_theta, ee_x_b, ee_y_b, ee_x_dot_b, ee_y_dot_b, rel_des_x_I, rel_des_y_I, rel_des_theta, rel_des_vx_I, rel_des_vy_I, rel_des_omega]
         ### Note: TOTAL_STATE contains all relevant information describing the problem, and all the information needed to animate the motion
         #         TOTAL_STATE is returned from the environment to the agent.
         #         A subset of the TOTAL_STATE, called the 'observation', is passed to the policy network to calculate acitons. This takes place in the agent
@@ -102,7 +102,8 @@ class Environment:
         #         The chaser and target state are contained in the environment. They are packaged up before being returned to the agent.
         #         The total state information returned must be as commented beside self.TOTAL_STATE_SIZE.
         #self.IRRELEVANT_STATES                = [6,7,8,9,10,11,18,19,20,21,22,23,24,25,26,27,28] # [chaser and target absolute position and rates (angular rate only for target)] indices of states who are irrelevant to the policy network
-        self.IRRELEVANT_STATES                = [6,7,8,9,10,11,12,13,14,15,16,18,19,20,21,25,26,27,28] # [chaser absolute position and rate, target relative position and absolute angular rate] indices of states who are irrelevant to the policy network
+        #self.IRRELEVANT_STATES                = [6,7,8,9,10,11,12,13,14,15,16,18,19,20,21,25,26,27,28] # [chaser absolute position and rate, target relative position and absolute angular rate] indices of states who are irrelevant to the policy network
+        self.IRRELEVANT_STATES                = [6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,25,26,27,28] # [chaser absolute position and rate, target relative position and absolute angular rate] indices of states who are irrelevant to the policy network
         self.OBSERVATION_SIZE                 = self.TOTAL_STATE_SIZE - len(self.IRRELEVANT_STATES) # the size of the observation input to the policy
         self.ACTION_SIZE                      = 3 # [x_dot_dot, y_dot_dot, theta_dot_dot] in the inertial frame for x, y, theta.
         self.MAX_X_POSITION                   = 3.5 # [m]
@@ -125,7 +126,9 @@ class Environment:
                                                           0.0, 0.0, 0.0, -self.MAX_VELOCITY, -self.MAX_VELOCITY, -self.MAX_BODY_ANGULAR_VELOCITY, # Target
                                                           0.0, 0.0, -3*self.MAX_VELOCITY, -3*self.MAX_VELOCITY, # End-effector
                                                           -self.MAX_X_POSITION, -self.MAX_Y_POSITION, 0, #relative_x_i, relative_y_i, relative_theta,
-                                                          -0.688, -0.8, -0.2, -0.2]) #ee_x_b, ee_y_b, ee_x_dot_b, ee_y_dot_b
+                                                          -0.688, -0.8, -0.2, -0.2, #ee_x_b, ee_y_b, ee_x_dot_b, ee_y_dot_b
+                                                          -2.0, -2.0, 0.0, # rel_des_x_I, rel_des_y_I, rel_des_theta, 
+                                                          -self.MAX_VELOCITY, -self.MAX_VELOCITY, -self.MAX_BODY_ANGULAR_VELOCITY]) # rel_des_vx_I, rel_des_vy_I, rel_des_omega
                                                           # [m, m, rad, m/s, m/s, rad/s, rad, rad, rad, rad/s, rad/s, rad/s, m, m, rad, m/s, m/s, rad/s, m, m, m/s, m/s, m, m, rad, m, m, m/s, m/s] // lower bound for each element of TOTAL_STATE
         self.UPPER_STATE_BOUND                = np.array([ self.MAX_X_POSITION, self.MAX_Y_POSITION, 2*np.pi, self.MAX_VELOCITY, self.MAX_VELOCITY, self.MAX_BODY_ANGULAR_VELOCITY,  # Chaser 
                                                           np.pi/2, np.pi/2, np.pi/2, # Shoulder_theta, Elbow_theta, Wrist_theta
@@ -133,7 +136,9 @@ class Environment:
                                                           self.MAX_X_POSITION, self.MAX_Y_POSITION, 2*np.pi, self.MAX_VELOCITY, self.MAX_VELOCITY, self.MAX_BODY_ANGULAR_VELOCITY, # Target
                                                           self.MAX_X_POSITION, self.MAX_Y_POSITION, 3*self.MAX_VELOCITY, 3*self.MAX_VELOCITY, # End-effector
                                                           self.MAX_X_POSITION, self.MAX_Y_POSITION, 2*np.pi, #relative_x_i, relative_y_i, relative_theta,
-                                                          0.688, 0.8, 0.2, 0.2]) #ee_x_b, ee_y_b, ee_x_dot_b, ee_y_dot_b
+                                                          0.688, 0.8, 0.2, 0.2, #ee_x_b, ee_y_b, ee_x_dot_b, ee_y_dot_b
+                                                          2.0, 2.0, 2*np.pi, # rel_des_x_I, rel_des_y_I, rel_des_theta, 
+                                                          self.MAX_VELOCITY, self.MAX_VELOCITY, self.MAX_BODY_ANGULAR_VELOCITY]) # rel_des_vx_I, rel_des_vy_I, rel_des_omega
                                                           # [m, m, rad, m/s, m/s, rad/s, rad, rad, rad, rad/s, rad/s, rad/s, m, m, rad, m/s, m/s, rad/s, m, m, m/s, m/s, m, m, rad, m, m, m/s, m/s] // Upper bound for each element of TOTAL_STATE
         self.INITIAL_CHASER_POSITION          = np.array([self.MAX_X_POSITION/3, self.MAX_Y_POSITION/2, 0.0]) # [m, m, rad]
         self.INITIAL_CHASER_VELOCITY          = np.array([0.0,  0.0, 0.0]) # [m/s, m/s, rad/s]
@@ -210,14 +215,26 @@ class Environment:
         self.FALL_OFF_TABLE_PENALTY   =   00.
         self.END_ON_FALL              = False # end episode on a fall off the table
         self.GOAL_REWARD              =   0.
-        self.NEGATIVE_PENALTY_FACTOR  = 1.5 # How much of a factor to additionally penalize negative rewards
-        self.MAX_NUMBER_OF_TIMESTEPS  = 900 # per episode -- 450 for stationary, 900 for rotating
+        self.NEGATIVE_PENALTY_FACTOR  = 1.5 # How much of a factor to additionally penalize negative rewards        
         self.ADDITIONAL_VALUE_INFO    = False # whether or not to include additional reward and value distribution information on the animations
         self.REWARD_TYPE              = True # True = Linear; False = Exponential
         self.REWARD_WEIGHTING         = [0.5, 0.5, 0.1] # How much to weight the rewards in the state
         self.REWARD_MULTIPLIER        = 250 # how much to multiply the differential reward by
         self.HOLD_POINT_RADIUS        = 1.5 # [m] 
         
+        # Sparse Reward Components
+        self.SHAPED_REWARDS                  = False # True: old shaped reward field; False: new reward-only-when-at-desired-state system
+        self.DESIRED_POSITION_RADIUS         = 0.05 # [m] radius of circle around desired location to give rewards
+        self.DESIRED_POSITION_REWARD         = 1 # [rewards/timestep]
+        self.DESIRED_ATTITUDE_RADIUS         = 5 * np.pi/180 # [rad] threshold within which rewards will be given
+        self.DESIRED_ATTITUDE_REWARD         = 0.5 # [rewards/timestep]
+        self.DESIRED_VELOCITY_ERROR          = 0.02 # [m/s] rewards given when velocity error is lower than this threshold
+        self.DESIRED_VELOCITY_REWARD         = 1 # [rewards/timestep]
+        self.DESIRED_ANGULAR_RATE_ERROR      = 3 * np.pi/180 # [deg/s] maximum deviation from the desired angular rate before rewards are withheld
+        self.DESIRED_ANGULAR_VELOCITY_REWARD = 0.5 # [rewards/timestep]
+        self.ACCELERATION_PENALTY            = 2 # [rewards-per-unit-acceleration-per-timestep] how much we should penalize all acceleration
+        self.ANGULAR_ACCELERATION_PENALTY    = 1 # [rewards-per-unit-acceleration-per-timestep] how much we should penalize all acceleration
+  
         
         # Old (Phase 3) Reward function properties
         self.DOCKING_REWARD                        = 0 # A lump-sum given to the chaser when it docks
@@ -336,6 +353,9 @@ class Environment:
         # Obstacle initial location (not randomized)
         self.obstacle_location = np.array([0,0])
         
+        # Update the desired locations
+        self.update_desired_relative_location_and_velocity_inertial()
+        
         # Check for collisions
         self.check_collisions()
         # If we are colliding (unfairly) upon a reset, reset the environment again!
@@ -453,14 +473,19 @@ class Environment:
     def make_total_state(self):
         
         # Assembles all the data into the shape of TOTAL STATE so that it is consistent
-        # chaser_x, chaser_y, chaser_theta, chaser_x_dot, chaser_y_dot, chaser_theta_dot, 
-        # shoulder_theta, elbow_theta, wrist_theta, shoulder_theta_dot, elbow_theta_dot, wrist_theta_dot, 
-        # target_x, target_y, target_theta, target_x_dot, target_y_dot, target_theta_dot, 
-        # ee_x_I, ee_y_I, ee_x_dot_I, ee_y_dot_I,
-        # relative_x_b, relative_y_b, relative_theta,
-        # ee_x_b, ee_y_b, ee_x_dot_b, ee_y_dot_b]
+        # [chaser_x, chaser_y, chaser_theta, 
+        # chaser_x_dot, chaser_y_dot, chaser_theta_dot, 
+        # shoulder_theta, elbow_theta, wrist_theta, 
+        # shoulder_theta_dot, elbow_theta_dot, wrist_theta_dot, 
+        # target_x, target_y, target_theta, 
+        # target_x_dot, target_y_dot, target_theta_dot, 
+        # ee_x, ee_y, ee_x_dot, ee_y_dot, 
+        # relative_x_I, relative_y_I, relative_theta, 
+        # ee_x_b, ee_y_b, ee_x_dot_b, ee_y_dot_b, 
+        # rel_des_x_I, rel_des_y_I, rel_des_theta, 
+        # rel_des_vx_I, rel_des_vy_I, rel_des_omega]
         
-        total_state = np.concatenate([self.chaser_position[:2], np.array([self.chaser_position[2] % (2*np.pi)]), self.chaser_velocity, self.arm_angles, self.arm_angular_rates, self.target_position[:2], np.array([self.target_position[2] % (2*np.pi)]), self.target_velocity, self.end_effector_position, self.end_effector_velocity, self.relative_position_inertial, self.relative_angle, self.end_effector_position_body, self.end_effector_velocity_body])
+        total_state = np.concatenate([self.chaser_position[:2], np.array([self.chaser_position[2] % (2*np.pi)]), self.chaser_velocity, self.arm_angles, self.arm_angular_rates, self.target_position[:2], np.array([self.target_position[2] % (2*np.pi)]), self.target_velocity, self.end_effector_position, self.end_effector_velocity, self.relative_position_inertial, self.relative_angle, self.end_effector_position_body, self.end_effector_velocity_body, self.relative_desired_position_inertial, self.relative_desired_velocity_inertial])
         
         return total_state
     
@@ -480,6 +505,25 @@ class Environment:
         
         # Relative angle and wrap it to [0, 2*np.pi]
         self.relative_angle = np.array([(self.target_position[-1] - self.chaser_position[-1])%(2*np.pi)])
+        
+    
+    def update_desired_relative_location_and_velocity_inertial(self):
+        # Calculate the desired X, Y, theta, Vx, Vy, omega 
+        # relative to the chaser's current state
+        # all in the inertial frame
+        
+        # Calculate desired position and velocity in the inertial frame
+        desired_position_relative_to_target_I = np.array([np.cos(self.target_position[2])*(self.HOLD_POINT_RADIUS), np.sin(self.target_position[2])*(self.HOLD_POINT_RADIUS), 0])
+        desired_position_I = self.target_position + desired_position_relative_to_target_I
+        desired_velocity_I = self.target_velocity + np.cross(np.array([0,0,self.target_velocity[-1]]), desired_position_relative_to_target_I)
+        
+        # Now calculate the chaser's relative position and velocity to that desired location and velocity in the inertial frame
+        self.relative_desired_position_inertial = desired_position_I - self.chaser_position
+        self.relative_desired_velocity_inertial = desired_velocity_I - self.chaser_velocity
+        
+        # Wrapping relative angle to 0-2pi
+        self.relative_desired_position_inertial[-1] = self.relative_desired_position_inertial[-1] % 2*np.pi        
+        
 
     
     def make_chaser_state(self):
@@ -550,6 +594,9 @@ class Environment:
         
         # Check for collisions
         self.check_collisions()
+        
+        # Update the desired locations
+        self.update_desired_relative_location_and_velocity_inertial()
         
         # Increment the timestep
         self.time += self.TIMESTEP
@@ -900,53 +947,93 @@ class Environment:
 
     def reward_function(self, action):
         # Returns the reward for this TIMESTEP as a function of the state and action
-
-        # Sets the current location that we are trying to move to
-        if self.phase_number == 0:
-            desired_location = self.hold_point
-        elif self.phase_number == 1:
-            desired_location = self.docking_port
-
-
-        current_position_reward = np.zeros(1)
-
-        # Calculates a reward map
-        if self.REWARD_TYPE:
-            # Linear reward
-            current_position_reward = -np.abs((desired_location - self.chaser_position)*self.REWARD_WEIGHTING)* self.TARGET_REWARD
-        else:
-            # Exponential reward
-            current_position_reward = np.exp(-np.sum(np.absolute(desired_location - self.chaser_position[:self.POSITION_STATE_LENGTH])*self.REWARD_WEIGHTING)) * self.TARGET_REWARD
-
+        
         reward = np.zeros(1)
-
-        # If it's not the first timestep, calculate the differential reward
-        if np.all([self.previous_position_reward[i] is not None for i in range(len(self.previous_position_reward))]):
-            reward = (current_position_reward - self.previous_position_reward)*self.REWARD_MULTIPLIER
-            for i in range(len(reward)):
-                if reward[i] < 0:
-                    reward[i]*= self.NEGATIVE_PENALTY_FACTOR
-
-        self.previous_position_reward = current_position_reward
-
-        # Collapsing to a scalar
-        reward = np.sum(reward)
-
-        # Giving a penalty for docking too quickly
-        if self.phase_number == 1 and np.any(np.abs(action) > self.MAX_DOCKING_SPEED):
-            reward -= self.DOCKING_TOO_FAST_PENALTY
-
+        
+        if self.SHAPED_REWARDS:                
+    
+            # Sets the current location that we are trying to move to
+            if self.phase_number == 0:
+                desired_location = self.hold_point
+            elif self.phase_number == 1:
+                desired_location = self.docking_port
+    
+    
+            current_position_reward = np.zeros(1)
+    
+            # Calculates a reward map
+            if self.REWARD_TYPE:
+                # Linear reward
+                current_position_reward = -np.abs((desired_location - self.chaser_position)*self.REWARD_WEIGHTING)* self.TARGET_REWARD
+            else:
+                # Exponential reward
+                current_position_reward = np.exp(-np.sum(np.absolute(desired_location - self.chaser_position[:self.POSITION_STATE_LENGTH])*self.REWARD_WEIGHTING)) * self.TARGET_REWARD
+    
+            reward = np.zeros(1)
+    
+            # If it's not the first timestep, calculate the differential reward
+            if np.all([self.previous_position_reward[i] is not None for i in range(len(self.previous_position_reward))]):
+                reward = (current_position_reward - self.previous_position_reward)*self.REWARD_MULTIPLIER
+                for i in range(len(reward)):
+                    if reward[i] < 0:
+                        reward[i]*= self.NEGATIVE_PENALTY_FACTOR
+    
+            self.previous_position_reward = current_position_reward
+    
+            # Collapsing to a scalar
+            reward = np.sum(reward)
+    
+            # Giving a penalty for docking too quickly
+            if self.phase_number == 1 and np.any(np.abs(action) > self.MAX_DOCKING_SPEED):
+                reward -= self.DOCKING_TOO_FAST_PENALTY
+        
+            # Giving a large reward for completing the task
+            if np.sum(np.absolute(self.chaser_position - desired_location)) < 0.01:
+                reward += self.GOAL_REWARD
+                
+            # Giving a large penalty for colliding with the obstacle
+            if np.linalg.norm(self.chaser_position[:-1] - self.obstacle_location) <= self.OBSTABLE_DISTANCE and self.USE_OBSTACLE:
+                reward -= self.OBSTABLE_PENALTY
+                
+            # Giving a penalty for colliding with the target. These booleans are updated in self.check_collisions()
+            if self.chaser_target_collision:
+                reward -= self.TARGET_COLLISION_PENALTY
+            
+            if self.end_effector_collision:
+                reward -= self.END_EFFECTOR_COLLISION_PENALTY
+            
+            if self.forbidden_area_collision:
+                reward -= self.END_EFFECTOR_COLLISION_PENALTY
+                
+            if self.elbow_target_collision:
+                reward -= self.END_EFFECTOR_COLLISION_PENALTY
+        
+        # We are using sparse rewards!
+        else:
+            if np.linalg.norm(self.relative_desired_position_inertial[:-1]) < self.DESIRED_POSITION_RADIUS:
+                reward += self.DESIRED_POSITION_REWARD
+                #print("Desired position reward!")
+            
+            if np.abs(self.relative_desired_position_inertial[-1]) < self.DESIRED_ATTITUDE_RADIUS:
+                reward += self.DESIRED_ATTITUDE_REWARD
+                #print("Desired attitude reward!")
+            
+            if np.linalg.norm(self.relative_desired_velocity_inertial[:-1]) < self.DESIRED_VELOCITY_ERROR:
+                reward += self.DESIRED_VELOCITY_REWARD
+                #print("Desired velocity reward!")
+            
+            if np.abs(self.relative_desired_velocity_inertial[-1]) < self.DESIRED_ANGULAR_RATE_ERROR:
+                reward += self.DESIRED_ANGULAR_VELOCITY_REWARD
+                #print("Desired omega reward!")
+            
+            reward -= np.sum(np.abs(action) * [self.ACCELERATION_PENALTY, self.ACCELERATION_PENALTY, self.ANGULAR_ACCELERATION_PENALTY])
+            
+            
+        
+        # Some generic penalties regardless of the reward function type
         # Giving a massive penalty for falling off the table
         if self.chaser_position[0] > self.UPPER_STATE_BOUND[0] or self.chaser_position[0] < self.LOWER_STATE_BOUND[0] or self.chaser_position[1] > self.UPPER_STATE_BOUND[1] or self.chaser_position[1] < self.LOWER_STATE_BOUND[1]:
             reward -= self.FALL_OFF_TABLE_PENALTY/self.TIMESTEP
-
-        # Giving a large reward for completing the task
-        if np.sum(np.absolute(self.chaser_position - desired_location)) < 0.01:
-            reward += self.GOAL_REWARD
-            
-        # Giving a large penalty for colliding with the obstacle
-        if np.linalg.norm(self.chaser_position[:-1] - self.obstacle_location) <= self.OBSTABLE_DISTANCE and self.USE_OBSTACLE:
-            reward -= self.OBSTABLE_PENALTY
             
         # Giving a penalty for colliding with the target. These booleans are updated in self.check_collisions()
         if self.chaser_target_collision:
@@ -960,10 +1047,12 @@ class Environment:
             
         if self.elbow_target_collision:
             reward -= self.END_EFFECTOR_COLLISION_PENALTY
+        
 
         # Multiplying the reward by the TIMESTEP to give the rewards on a per-second basis
         return (reward*self.TIMESTEP).squeeze()
     
+  
     def check_collisions(self):
         """ Calculate whether the different objects are colliding with the target.
             It also checks if the chaser has fallen off the table, if the end-effector has docked,

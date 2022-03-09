@@ -1,0 +1,10 @@
+slprj/
+*.slxc
+*.autosave
+*.asv
+*.elf
+*ert_rtw/
+test
+*code_v2/
+__pycache__/
+trajectories/

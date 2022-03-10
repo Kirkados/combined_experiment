@@ -1,0 +1,6 @@
+model_checkpoint_path: "Iteration_3041420.ckpt"
+all_model_checkpoint_paths: "Iteration_3010000.ckpt"
+all_model_checkpoint_paths: "Iteration_3020000.ckpt"
+all_model_checkpoint_paths: "Iteration_3030000.ckpt"
+all_model_checkpoint_paths: "Iteration_3040000.ckpt"
+all_model_checkpoint_paths: "Iteration_3041420.ckpt"

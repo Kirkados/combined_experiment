@@ -334,7 +334,7 @@ if initial_condition_number == 1
     drop_states_BLUE          = [ xLength/2+0.9; yLength/2+0.5; 0];         % [m; m; rad]
 
     init_states_RED           = [ xLength/2+0.7; yLength/2; pi]; % [m; m; rad]
-    init_states_BLACK         = [ xLength/2; yLength/2; 0];      % [m; m; rad]
+    init_states_BLACK         = [ xLength/2; yLength/2; -pi/2];      % [m; m; rad]
     init_states_BLUE          = [ xLength/2+0.9; yLength/2+0.5; 0];      % [m; m; rad]
 
     home_states_RED           = [ xLength/2+0.7; yLength/2; pi]; % [m; m; rad]

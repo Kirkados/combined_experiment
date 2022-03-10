@@ -32,11 +32,11 @@ fprintf('|----------------------------------------------------------------|\n')
 fprintf('|----------------------------------------------------------------|\n')
 
 %% User-defined constants:
-
+Imported_Arm = load('2DEGPERS');
 % The folder name of the model used (where the physical parameters will be pulled from)
 model_folder = '9day_newProperties_newthrust_DECAY1_a02_alpha05_spin_rcdc-2021-07-22_11-35'
 
-initial_condition_number = 3 % [1, 2, or 3] describing the three initial conditions being tested (defined at line 312)
+initial_condition_number = 1 % [1, 2, or 3] describing the three initial conditions being tested (defined at line 312)
 
 % Arm limit and post-capture parameters
 joint_limit_buffer_angle = 0; % [deg] how early the arm will try and stop before reading 90 deg
@@ -228,8 +228,8 @@ serverRate                     = 1/10;       % 10 Hz
 
 Phase0_Duration                = 5;        % [s]
 Phase1_Duration                = 5;         % [s]
-Phase2_Duration                = 25;        % [s]
-Phase3_Duration                = 60;        % [s]
+Phase2_Duration                = 15;        % [s]
+Phase3_Duration                = 180;        % [s]
 Phase4_Duration                = 20;        % [s]
 Phase5_Duration                = 5;         % [s]
 
@@ -238,10 +238,10 @@ Phase5_Duration                = 5;         % [s]
 % diagram. The total duration of the sub-phases must equal the length of
 % the Phase3_Duration.
 
-Phase3_SubPhase1_Duration      = 0;        % [s]
-Phase3_SubPhase2_Duration      = 0;        % [s]
-Phase3_SubPhase3_Duration      = 0;        % [s]
-Phase3_SubPhase4_Duration      = 60;       % [s]
+Phase3_SubPhase1_Duration      = 30;        % [s]
+Phase3_SubPhase2_Duration      = 30;        % [s]
+Phase3_SubPhase3_Duration      = 120;        % [s]
+Phase3_SubPhase4_Duration      = 0;       % [s]
 
 % Determine the total experiment time from the durations:
 
@@ -327,16 +327,18 @@ if initial_condition_number == 1
     target_angular_velocity = 5*pi/180;
     target_starting_angle = 0;
 
-    drop_states_RED           = [ 1.16; 1.2; 0]; % [m; m; rad]
-    drop_states_BLACK         = [ 2.33; 1.2; target_starting_angle];  % [m; m; rad]
+    %%  Set the drop, initial, and home positions for each platform:
+
+    drop_states_RED           = [2.18401342773438,1.21458435058594,-3.12528014183044]; % [m; m; rad]
+    drop_states_BLACK         = [1.36947387695313,1.22175756835938,-0.0161599479615688];  % [m; m; rad]
     drop_states_BLUE          = [ xLength/2+0.9; yLength/2+0.5; 0];         % [m; m; rad]
 
-    init_states_RED           = [ 1.16; 1.2; 0]; % [m; m; rad]
-    init_states_BLACK         = [ 2.33; 1.2; target_starting_angle];      % [m; m; rad]
+    init_states_RED           = [ xLength/2+0.7; yLength/2; pi]; % [m; m; rad]
+    init_states_BLACK         = [ xLength/2; yLength/2; 0];      % [m; m; rad]
     init_states_BLUE          = [ xLength/2+0.9; yLength/2+0.5; 0];      % [m; m; rad]
 
-    home_states_RED           = [ 1.16; 1.2; 0]; % [m; m; rad]
-    home_states_BLACK         = [ 2.33; 1.2; target_starting_angle];  % [m; m; rad]
+    home_states_RED           = [ xLength/2+0.7; yLength/2; pi]; % [m; m; rad]
+    home_states_BLACK         = [ xLength/2; yLength/2; 0];  % [m; m; rad]
     home_states_BLUE          = [ xLength/2-0.9; yLength/2+0.5; 0];  % [m; m; rad]
 
 elseif initial_condition_number == 2
@@ -399,7 +401,11 @@ elseif initial_condition_number == 3
     home_states_BLACK         = [ 2.33; 1.2; target_starting_angle];  % [m; m; rad]
     home_states_BLUE          = [ xLength/2-0.9; yLength/2+0.5; 0];  % [m; m; rad]
 end
-                                              
+        
+Joint1Angle = [Imported_Arm.primal.time'+55, Imported_Arm.primal.states(4,:)'];
+Joint2Angle = [Imported_Arm.primal.time'+55, Imported_Arm.primal.states(5,:)'];
+Joint3Angle = [Imported_Arm.primal.time'+55, Imported_Arm.primal.states(6,:)'];
+
 %% Start the graphical user interface:
 (target_starting_angle + target_angular_velocity*Phase2_Duration)*180/pi
 run('GUI_v3_07')

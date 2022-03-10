@@ -324,7 +324,7 @@ if initial_condition_number == 1
     initial_wrist_angle = 0*pi/180; % [rad]
 
     % Target parameters
-    target_angular_velocity = 5*pi/180;
+    target_angular_velocity = 2*pi/180;
     target_starting_angle = 0;
 
     %%  Set the drop, initial, and home positions for each platform:

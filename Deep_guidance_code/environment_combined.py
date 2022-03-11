@@ -162,7 +162,7 @@ class Environment:
         
         # Other characteristics 
         self.MIN_V                            = -1000.
-        self.MAX_V                            =  100.
+        self.MAX_V                            =  1000.
         self.N_STEP_RETURN                    =   5
         self.DISCOUNT_FACTOR                  = 0.95**(1/self.N_STEP_RETURN)
         self.TIMESTEP                         = 0.2 # [s]

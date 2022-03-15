@@ -171,7 +171,7 @@ class Environment:
         self.PREDETERMINED_ACTION             = np.array([0.01,-0.015,0.03,-0.07,0.01,0.1])
         self.DYNAMICS_DELAY                   = 0 # [timesteps of delay] how many timesteps between when an action is commanded and when it is realized
         self.AUGMENT_STATE_WITH_ACTION_LENGTH = 0 # [timesteps] how many timesteps of previous actions should be included in the state. This helps with making good decisions among delayed dynamics.
-        self.MAX_NUMBER_OF_TIMESTEPS          = 900# per episode
+        self.MAX_NUMBER_OF_TIMESTEPS          = 300#900# per episode
         self.ADDITIONAL_VALUE_INFO            = False # whether or not to include additional reward and value distribution information on the animations
         self.SKIP_FAILED_ANIMATIONS           = True # Error the program or skip when animations fail?        
         #self.KI                               = [17.0,17.0,0.295,0.02,0.0036,0.00008] # Integral gains for the integral-acceleration controller of the body and arm (x, y, theta, theta1, theta2, theta3)
@@ -225,15 +225,15 @@ class Environment:
         # Sparse Reward Components
         self.SHAPED_REWARDS                  = False # True: old shaped reward field; False: new reward-only-when-at-desired-state system
         self.DESIRED_POSITION_RADIUS         = 0.05 # [m] radius of circle around desired location to give rewards
-        self.DESIRED_POSITION_REWARD         = 1 # [rewards/timestep]
-        self.DESIRED_ATTITUDE_RADIUS         = 5 * np.pi/180 # [rad] threshold within which rewards will be given
-        self.DESIRED_ATTITUDE_REWARD         = 0.5 # [rewards/timestep]
+        self.DESIRED_POSITION_REWARD         = 5 # [rewards/second]
+        self.DESIRED_ATTITUDE_RADIUS         = 2 * np.pi/180 # [rad] threshold within which rewards will be given
+        self.DESIRED_ATTITUDE_REWARD         = 0.5 # [rewards/second]
         self.DESIRED_VELOCITY_ERROR          = 0.02 # [m/s] rewards given when velocity error is lower than this threshold
-        self.DESIRED_VELOCITY_REWARD         = 1 # [rewards/timestep]
-        self.DESIRED_ANGULAR_RATE_ERROR      = 3 * np.pi/180 # [deg/s] maximum deviation from the desired angular rate before rewards are withheld
-        self.DESIRED_ANGULAR_VELOCITY_REWARD = 0.5 # [rewards/timestep]
-        self.ACCELERATION_PENALTY            = 2 # [rewards-per-unit-acceleration-per-timestep] how much we should penalize all acceleration
-        self.ANGULAR_ACCELERATION_PENALTY    = 1 # [rewards-per-unit-acceleration-per-timestep] how much we should penalize all acceleration
+        self.DESIRED_VELOCITY_REWARD         = 1 # [rewards/second]
+        self.DESIRED_ANGULAR_RATE_ERROR      = 1 * np.pi/180 # [deg/s] maximum deviation from the desired angular rate before rewards are withheld
+        self.DESIRED_ANGULAR_VELOCITY_REWARD = 0.5 # [rewards/second]
+        self.ACCELERATION_PENALTY            = 20 # [rewards-per-unit-acceleration-per-second] how much we should penalize all acceleration
+        self.ANGULAR_ACCELERATION_PENALTY    = 10 # [rewards-per-unit-acceleration-per-second] how much we should penalize all acceleration
   
         
         # Old (Phase 3) Reward function properties

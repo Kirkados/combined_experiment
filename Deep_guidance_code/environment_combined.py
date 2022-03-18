@@ -158,7 +158,7 @@ class Environment:
         #self.RANDOMIZATION_ARM_ANGLE          = np.pi/2 # [rad] half-range uniform randomization arm angle
         #self.RANDOMIZATION_ARM_RATES          = 0.0 # [rad/s] half-range uniform randomization arm rates
         self.RANDOMIZATION_TARGET_VELOCITY    = 0.0 # [m/s] half-range uniform randomization target velocity
-        self.RANDOMIZATION_TARGET_OMEGA       = 10*np.pi/180 # [rad/s] half-range uniform randomization target omega
+        self.RANDOMIZATION_TARGET_OMEGA       = 5*np.pi/180 # [rad/s] half-range uniform randomization target omega
         
         # Other characteristics 
         self.MIN_V                            = -1000.
@@ -220,7 +220,7 @@ class Environment:
         self.REWARD_TYPE              = True # True = Linear; False = Exponential
         self.REWARD_WEIGHTING         = [0.5, 0.5, 0.1] # How much to weight the rewards in the state
         self.REWARD_MULTIPLIER        = 250 # how much to multiply the differential reward by
-        self.HOLD_POINT_RADIUS        = 1.5 # [m] 
+        self.HOLD_POINT_RADIUS        = 0.75 # [m] 
         
         # Sparse Reward Components
         self.SHAPED_REWARDS                  = False # True: old shaped reward field; False: new reward-only-when-at-desired-state system
@@ -513,7 +513,7 @@ class Environment:
         # all in the inertial frame
         
         # Calculate desired position and velocity in the inertial frame
-        desired_position_relative_to_target_I = np.array([np.cos(self.target_position[2])*(self.HOLD_POINT_RADIUS), np.sin(self.target_position[2])*(self.HOLD_POINT_RADIUS), 0])
+        desired_position_relative_to_target_I = np.array([np.sin(self.target_position[2])*(self.HOLD_POINT_RADIUS), np.cos(self.target_position[2])*(self.HOLD_POINT_RADIUS), -np.pi/2])
         desired_position_I = self.target_position + desired_position_relative_to_target_I
         desired_velocity_I = self.target_velocity + np.cross(np.array([0,0,self.target_velocity[-1]]), desired_position_relative_to_target_I)
         

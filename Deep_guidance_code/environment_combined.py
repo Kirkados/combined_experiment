@@ -225,13 +225,13 @@ class Environment:
         # Sparse Reward Components
         self.SHAPED_REWARDS                  = False # True: old shaped reward field; False: new reward-only-when-at-desired-state system
         self.DESIRED_POSITION_RADIUS         = 0.05 # [m] radius of circle around desired location to give rewards
-        self.DESIRED_POSITION_REWARD         = 5 # [rewards/second]
+        self.DESIRED_POSITION_REWARD         = 10 # [rewards/second]
         self.DESIRED_ATTITUDE_RADIUS         = 2 * np.pi/180 # [rad] threshold within which rewards will be given
-        self.DESIRED_ATTITUDE_REWARD         = 0.5 # [rewards/second]
+        self.DESIRED_ATTITUDE_REWARD         = 0.25 # [rewards/second]
         self.DESIRED_VELOCITY_ERROR          = 0.02 # [m/s] rewards given when velocity error is lower than this threshold
         self.DESIRED_VELOCITY_REWARD         = 1 # [rewards/second]
         self.DESIRED_ANGULAR_RATE_ERROR      = 1 * np.pi/180 # [deg/s] maximum deviation from the desired angular rate before rewards are withheld
-        self.DESIRED_ANGULAR_VELOCITY_REWARD = 0.5 # [rewards/second]
+        self.DESIRED_ANGULAR_VELOCITY_REWARD = 0.25 # [rewards/second]
         self.ACCELERATION_PENALTY            = 20 # [rewards-per-unit-acceleration-per-second] how much we should penalize all acceleration
         self.ANGULAR_ACCELERATION_PENALTY    = 10 # [rewards-per-unit-acceleration-per-second] how much we should penalize all acceleration
   

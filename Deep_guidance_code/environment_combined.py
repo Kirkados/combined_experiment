@@ -513,7 +513,7 @@ class Environment:
         # all in the inertial frame
         
         # Calculate desired position and velocity in the inertial frame
-        desired_position_relative_to_target_I = np.array([np.sin(self.target_position[2])*(self.HOLD_POINT_RADIUS), np.cos(self.target_position[2])*(self.HOLD_POINT_RADIUS), -np.pi/2])
+        desired_position_relative_to_target_I = np.array([-np.sin(self.target_position[2])*(self.HOLD_POINT_RADIUS), np.cos(self.target_position[2])*(self.HOLD_POINT_RADIUS), -np.pi/2])
         desired_position_I = self.target_position + desired_position_relative_to_target_I
         desired_velocity_I = self.target_velocity + np.cross(np.array([0,0,self.target_velocity[-1]]), desired_position_relative_to_target_I)
         

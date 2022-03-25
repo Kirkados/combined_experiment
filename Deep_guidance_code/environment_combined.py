@@ -220,7 +220,7 @@ class Environment:
         self.REWARD_TYPE              = True # True = Linear; False = Exponential
         self.REWARD_WEIGHTING         = [0.5, 0.5, 0.1] # How much to weight the rewards in the state
         self.REWARD_MULTIPLIER        = 250 # how much to multiply the differential reward by
-        self.HOLD_POINT_RADIUS        = 0.75 # [m] 
+        self.HOLD_POINT_RADIUS        = 0.9 # [m] 
         
         # Sparse Reward Components
         self.SHAPED_REWARDS                  = False # True: old shaped reward field; False: new reward-only-when-at-desired-state system

@@ -227,7 +227,7 @@ class Environment:
         self.DESIRED_POSITION_RADIUS         = 0.05 # [m] radius of circle around desired location to give rewards
         self.DESIRED_POSITION_REWARD         = 1 # [rewards/second]
         self.DESIRED_ATTITUDE_RADIUS         = 2 * np.pi/180 # [rad] threshold within which rewards will be given
-        self.DESIRED_ATTITUDE_REWARD         = 1 # [rewards/second]
+        self.DESIRED_ATTITUDE_REWARD         = 5 # [rewards/second]
         self.DESIRED_VELOCITY_ERROR          = 0.02 # [m/s] rewards given when velocity error is lower than this threshold
         self.DESIRED_VELOCITY_REWARD         = 1 # [rewards/second]
         self.DESIRED_ANGULAR_RATE_ERROR      = 1 * np.pi/180 # [deg/s] maximum deviation from the desired angular rate before rewards are withheld

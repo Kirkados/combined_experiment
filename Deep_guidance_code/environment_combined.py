@@ -485,7 +485,7 @@ class Environment:
         # rel_des_x_I, rel_des_y_I, rel_des_theta, 
         # rel_des_vx_I, rel_des_vy_I, rel_des_omega]
         
-        total_state = np.concatenate([self.chaser_position[:2], np.array([self.chaser_position[2] % (2*np.pi)]), self.chaser_velocity, self.arm_angles, self.arm_angular_rates, self.target_position[:2], np.array([self.target_position[2] % (2*np.pi)]), self.target_velocity, self.end_effector_position, self.end_effector_velocity, self.relative_position_inertial, self.relative_angle, self.end_effector_position_body, self.end_effector_velocity_body, self.relative_desired_position_inertial, self.relative_desired_velocity_inertial])
+        total_state = np.concatenate([self.chaser_position[:2], np.array([self.chaser_position[2] % (2*np.pi)]), self.chaser_velocity, self.arm_angles, self.arm_angular_rates, self.target_position[:2], np.array([self.target_position[2] % (2*np.pi)]), self.target_velocity, self.end_effector_position, self.end_effector_velocity, self.relative_position_inertial, self.relative_angle, self.end_effector_position_body, self.end_effector_velocity_body, self.chaser_position_error_inertial, self.chaser_velocity_error_inertial])
         
         return total_state
     
@@ -518,11 +518,11 @@ class Environment:
         desired_velocity_I = self.target_velocity + np.cross(np.array([0,0,self.target_velocity[-1]]), desired_position_relative_to_target_I)
         
         # Now calculate the chaser's relative position and velocity to that desired location and velocity in the inertial frame
-        self.relative_desired_position_inertial = desired_position_I - self.chaser_position
-        self.relative_desired_velocity_inertial = desired_velocity_I - self.chaser_velocity
+        self.chaser_position_error_inertial = desired_position_I - self.chaser_position
+        self.chaser_velocity_error_inertial = desired_velocity_I - self.chaser_velocity
         
         # Wrapping relative angle to 0-2pi
-        self.relative_desired_position_inertial[-1] = self.relative_desired_position_inertial[-1] % 2*np.pi        
+        self.chaser_position_error_inertial[-1] = self.chaser_position_error_inertial[-1] % 2*np.pi        
         
 
     
@@ -950,6 +950,11 @@ class Environment:
         
         reward = np.zeros(1)
         
+        self.correct_position_achieved = False
+        self.correct_velocity_achieved = False
+        self.correct_attitude_achieved = False
+        self.correct_angular_velocity_achieved = False
+        
         if self.SHAPED_REWARDS:                
     
             # Sets the current location that we are trying to move to
@@ -1010,21 +1015,29 @@ class Environment:
         
         # We are using sparse rewards!
         else:
-            if np.linalg.norm(self.relative_desired_position_inertial[:-1]) < self.DESIRED_POSITION_RADIUS:
+            if np.linalg.norm(self.chaser_position_error_inertial[:-1]) < self.DESIRED_POSITION_RADIUS:
                 reward += self.DESIRED_POSITION_REWARD
                 #print("Desired position reward!")
+                
+                self.correct_position_achieved = True
+        
+        
+        
             
-            if np.abs(self.relative_desired_position_inertial[-1]) < self.DESIRED_ATTITUDE_RADIUS:
+            if np.abs(self.chaser_position_error_inertial[-1]) < self.DESIRED_ATTITUDE_RADIUS:
                 reward += self.DESIRED_ATTITUDE_REWARD
                 #print("Desired attitude reward!")
+                self.correct_velocity_achieved = True
             
-            if np.linalg.norm(self.relative_desired_velocity_inertial[:-1]) < self.DESIRED_VELOCITY_ERROR:
+            if np.linalg.norm(self.chaser_velocity_error_inertial[:-1]) < self.DESIRED_VELOCITY_ERROR:
                 reward += self.DESIRED_VELOCITY_REWARD
                 #print("Desired velocity reward!")
+                self.correct_attitude_achieved = True
             
-            if np.abs(self.relative_desired_velocity_inertial[-1]) < self.DESIRED_ANGULAR_RATE_ERROR:
+            if np.abs(self.chaser_velocity_error_inertial[-1]) < self.DESIRED_ANGULAR_RATE_ERROR:
                 reward += self.DESIRED_ANGULAR_VELOCITY_REWARD
                 #print("Desired omega reward!")
+                self.correct_angular_velocity_achieved = True
             
             reward -= np.sum(np.abs(action) * [self.ACCELERATION_PENALTY, self.ACCELERATION_PENALTY, self.ANGULAR_ACCELERATION_PENALTY])
             
@@ -1267,9 +1280,11 @@ class Environment:
                 ##### Step the environment #####
                 ################################ 
                 reward, done = self.step(action)
-
+                
+                reward_state = (self.correct_position_achieved, self.correct_velocity_achieved, self.correct_attitude_achieved, self.correct_angular_velocity_achieved)
+                
                 # Return (TOTAL_STATE, reward, done)
-                self.env_to_agent.put((self.make_total_state(), reward, done))
+                self.env_to_agent.put((self.make_total_state(), reward, done, reward_state))
 
 
 #####################################################################
@@ -1598,7 +1613,7 @@ def calculate_coriolis_matrix(chaser_state, t, parameters):
 ##########################################
 ##### Function to animate the motion #####
 ##########################################
-def render(states, actions, instantaneous_reward_log, cumulative_reward_log, critic_distributions, target_critic_distributions, projected_target_distribution, bins, loss_log, episode_number, filename, save_directory, time_log, timestep_where_docking_occurred = -1):
+def render(states, actions, instantaneous_reward_log, cumulative_reward_log, critic_distributions, target_critic_distributions, projected_target_distribution, bins, loss_log, episode_number, filename, save_directory, time_log, reward_state_log = (False, False, False, False), timestep_where_docking_occurred = -1):
 
     # Load in a temporary environment, used to grab the physical parameters
     temp_env = Environment()
@@ -1824,9 +1839,10 @@ def render(states, actions, instantaneous_reward_log, cumulative_reward_log, cri
         control1_text     = subfig1.text(x = 0.01, y = 0.90, s = '', fontsize = 6, transform=subfig1.transAxes)
         control2_text     = subfig1.text(x = 0.01, y = 0.85, s = '', fontsize = 6, transform=subfig1.transAxes)
         control3_text     = subfig1.text(x = 0.01, y = 0.80, s = '', fontsize = 6, transform=subfig1.transAxes)
-        #control4_text     = subfig1.text(x = 0.01, y = 0.75, s = '', fontsize = 6, transform=subfig1.transAxes)
-        #control5_text     = subfig1.text(x = 0.01, y = 0.70, s = '', fontsize = 6, transform=subfig1.transAxes)
-        #control6_text     = subfig1.text(x = 0.01, y = 0.65, s = '', fontsize = 6, transform=subfig1.transAxes)
+        reward_component_text1     = subfig1.text(x = 0.01, y = 0.75, s = '', fontsize = 6, transform=subfig1.transAxes)
+        reward_component_text2     = subfig1.text(x = 0.01, y = 0.70, s = '', fontsize = 6, transform=subfig1.transAxes)
+        reward_component_text3     = subfig1.text(x = 0.01, y = 0.65, s = '', fontsize = 6, transform=subfig1.transAxes)
+        reward_component_text4     = subfig1.text(x = 0.01, y = 0.60, s = '', fontsize = 6, transform=subfig1.transAxes)
         
         
         
@@ -1858,9 +1874,10 @@ def render(states, actions, instantaneous_reward_log, cumulative_reward_log, cri
         control1_text.set_text('$\ddot{x}$ = %6.3f; true = %6.3f' %(actions[frame,0], accelerations[frame,0]))
         control2_text.set_text('$\ddot{y}$ = %6.3f; true = %6.3f' %(actions[frame,1], accelerations[frame,1]))
         control3_text.set_text(r'$\ddot{\theta}$ = %1.3f; true = %6.3f' %(actions[frame,2], accelerations[frame,2]))
-        #control4_text.set_text('$\ddot{q_0}$ = %6.3f; true = %6.3f' %(actions[frame,3], accelerations[frame,3]))
-        #control5_text.set_text('$\ddot{q_1}$ = %6.3f; true = %6.3f' %(actions[frame,4], accelerations[frame,4]))
-        #control6_text.set_text('$\ddot{q_2}$ = %6.3f; true = %6.3f' %(actions[frame,5], accelerations[frame,5]))
+        reward_component_text1.set_text('Position reward: %s' %(reward_state_log[frame][0]))
+        reward_component_text2.set_text('Velocity reward: %s' %(reward_state_log[frame][1]))
+        reward_component_text3.set_text('Attitude reward: %s' %(reward_state_log[frame][2]))
+        reward_component_text4.set_text('Ang vel reward: %s' %(reward_state_log[frame][3]))
 
         # Update the reward text
         reward_text.set_text('Total reward = %.1f' %cumulative_reward_log[frame])

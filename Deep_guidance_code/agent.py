@@ -202,7 +202,9 @@ class Agent:
                     done_log = []
                     discount_factor_log = []
                     raw_total_state_log.append(total_state)
-                    cumulative_reward_log.append(0) # Starting reward log with 0 at the initial state                    
+                    cumulative_reward_log.append(0) # Starting reward log with 0 at the initial state   
+                    reward_state_log = []
+                    reward_state_log.append((False, False, False, False))
 
 
             else:
@@ -252,7 +254,7 @@ class Agent:
                 self.agent_to_env.put((action,))
 
                 # Receive results from stepped environment
-                next_total_state, reward, done = self.env_to_agent.get() # The * means the variable will be unpacked only if it exists
+                next_total_state, reward, done, reward_state = self.env_to_agent.get() # The * means the variable will be unpacked only if it exists
 
                 # Add reward we just received to running total for this episode
                 episode_reward += reward
@@ -304,6 +306,7 @@ class Agent:
                         instantaneous_reward_log.append(n_step_reward)
                         done_log.append(done)
                         discount_factor_log.append(discount_factor)
+                        reward_state_log.append(reward_state)
 
                 # End of timestep -> next state becomes current state
                 observation = next_observation
@@ -339,6 +342,7 @@ class Agent:
                             instantaneous_reward_log.append(n_step_reward)
                             done_log.append(done)
                             discount_factor_log.append(discount_factor)
+                            reward_state_log.append(reward_state)
                     
             # # We are done the episode! If we want to render this one, continue animating until the arm comes to rest #
             # if (reward > 0) and (self.n_agent == 1 and Settings.RECORD_VIDEO and (episode_number % (Settings.CHECK_GREEDY_PERFORMANCE_EVERY_NUM_EPISODES*Settings.VIDEO_RECORD_FREQUENCY) == 0 or episode_number == 1)):
@@ -386,7 +390,7 @@ class Agent:
 
                     # Render the episode
                     time_log = np.linspace(0, (len(raw_total_state_log)-1)*Settings.TIMESTEP, len(raw_total_state_log))
-                    environment_file.render(np.asarray(raw_total_state_log), np.asarray(action_log), np.asarray(instantaneous_reward_log), np.asarray(cumulative_reward_log), critic_distributions, target_critic_distributions, projected_target_distribution, bins, np.asarray(loss_log), episode_number, self.filename, Settings.MODEL_SAVE_DIRECTORY, time_log)
+                    environment_file.render(np.asarray(raw_total_state_log), np.asarray(action_log), np.asarray(instantaneous_reward_log), np.asarray(cumulative_reward_log), critic_distributions, target_critic_distributions, projected_target_distribution, bins, np.asarray(loss_log), episode_number, self.filename, Settings.MODEL_SAVE_DIRECTORY, time_log, reward_state_log)
 
                 except queue.Empty:
                     print("Skipping this animation!")

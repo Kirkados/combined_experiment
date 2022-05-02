@@ -522,7 +522,7 @@ class Environment:
         self.chaser_velocity_error_inertial = desired_velocity_I - self.chaser_velocity
         
         # Wrapping relative angle to 0-2pi
-        self.chaser_position_error_inertial[-1] = self.chaser_position_error_inertial[-1] % 2*np.pi        
+        #self.chaser_position_error_inertial[-1] = self.chaser_position_error_inertial[-1] % 2*np.pi        
         
 
     
@@ -1027,12 +1027,12 @@ class Environment:
             if np.abs(self.chaser_position_error_inertial[-1]) < self.DESIRED_ATTITUDE_RADIUS:
                 reward += self.DESIRED_ATTITUDE_REWARD
                 #print("Desired attitude reward!")
-                self.correct_velocity_achieved = True
+                self.correct_attitude_achieved = True
             
             if np.linalg.norm(self.chaser_velocity_error_inertial[:-1]) < self.DESIRED_VELOCITY_ERROR:
                 reward += self.DESIRED_VELOCITY_REWARD
                 #print("Desired velocity reward!")
-                self.correct_attitude_achieved = True
+                self.correct_velocity_achieved = True
             
             if np.abs(self.chaser_velocity_error_inertial[-1]) < self.DESIRED_ANGULAR_RATE_ERROR:
                 reward += self.DESIRED_ANGULAR_VELOCITY_REWARD

@@ -162,7 +162,7 @@ class Environment:
         
         # Other characteristics 
         self.MIN_V                            = -100.
-        self.MAX_V                            =  500.
+        self.MAX_V                            =  750.
         self.N_STEP_RETURN                    =   5
         self.DISCOUNT_FACTOR                  = 0.95**(1/self.N_STEP_RETURN)
         self.TIMESTEP                         = 0.2 # [s]
@@ -225,7 +225,7 @@ class Environment:
         # Sparse Reward Components
         self.SHAPED_REWARDS                  = False # True: old shaped reward field; False: new reward-only-when-at-desired-state system
         self.DESIRED_POSITION_RADIUS         = 0.05 # [m] radius of circle around desired location to give rewards
-        self.DESIRED_POSITION_REWARD         = 15 # [rewards/second]
+        self.DESIRED_POSITION_REWARD         = 12.5 # [rewards/second]
         self.DESIRED_ATTITUDE_RADIUS         = 2 * np.pi/180 # [rad] threshold within which rewards will be given
         self.DESIRED_ATTITUDE_REWARD         = 5 # [rewards/second]
         self.DESIRED_VELOCITY_ERROR          = 0.02 # [m/s] rewards given when velocity error is lower than this threshold

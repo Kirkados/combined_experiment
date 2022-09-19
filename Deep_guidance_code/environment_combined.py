@@ -232,8 +232,8 @@ class Environment:
         self.DESIRED_VELOCITY_REWARD         = 0#1 # [rewards/second]
         self.DESIRED_ANGULAR_RATE_ERROR      = 1 * np.pi/180 # [deg/s] maximum deviation from the desired angular rate before rewards are withheld
         self.DESIRED_ANGULAR_VELOCITY_REWARD = 0#0.25 # [rewards/second]
-        self.ACCELERATION_PENALTY            = 0#30 # [rewards-per-unit-acceleration-per-second] how much we should penalize all acceleration
-        self.ANGULAR_ACCELERATION_PENALTY    = 0#15 # [rewards-per-unit-acceleration-per-second] how much we should penalize all acceleration
+        self.ACCELERATION_PENALTY            = 30 # [rewards-per-unit-acceleration-per-second] how much we should penalize all acceleration
+        self.ANGULAR_ACCELERATION_PENALTY    = 15 # [rewards-per-unit-acceleration-per-second] how much we should penalize all acceleration
   
         
         # Old (Phase 3) Reward function properties

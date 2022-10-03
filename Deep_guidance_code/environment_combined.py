@@ -92,7 +92,7 @@ class Environment:
         The positions are in inertial frame, unless noted otherwise, but the manipulator angles are in the joint frame.
         
         """
-        self.ON_CEDAR                 = True # False for Graham, Béluga, Niagara, and RCDC
+        self.ON_CEDAR                 = False # False for Graham, Béluga, Niagara, and RCDC
         self.ACTIONS_IN_INERTIAL      = True # Are actions being calculated in the inertial frame or body frame?
         self.TOTAL_STATE_SIZE         = 35 # [chaser_x, chaser_y, chaser_theta, chaser_x_dot, chaser_y_dot, chaser_theta_dot, shoulder_theta, elbow_theta, wrist_theta, shoulder_theta_dot, elbow_theta_dot, wrist_theta_dot, target_x, target_y, target_theta, target_x_dot, target_y_dot, target_theta_dot, ee_x, ee_y, ee_x_dot, ee_y_dot, relative_x_I, relative_y_I, relative_theta, ee_x_b, ee_y_b, ee_x_dot_b, ee_y_dot_b, rel_des_x_I, rel_des_y_I, rel_des_theta, rel_des_vx_I, rel_des_vy_I, rel_des_omega]
         ### Note: TOTAL_STATE contains all relevant information describing the problem, and all the information needed to animate the motion
@@ -232,8 +232,8 @@ class Environment:
         self.DESIRED_VELOCITY_REWARD         = 0#1 # [rewards/second]
         self.DESIRED_ANGULAR_RATE_ERROR      = 1 * np.pi/180 # [deg/s] maximum deviation from the desired angular rate before rewards are withheld
         self.DESIRED_ANGULAR_VELOCITY_REWARD = 0#0.25 # [rewards/second]
-        self.ACCELERATION_PENALTY            = 30 # [rewards-per-unit-acceleration-per-second] how much we should penalize all acceleration
-        self.ANGULAR_ACCELERATION_PENALTY    = 15 # [rewards-per-unit-acceleration-per-second] how much we should penalize all acceleration
+        self.ACCELERATION_PENALTY            = 0 # [rewards-per-unit-acceleration-per-second] how much we should penalize all acceleration
+        self.ANGULAR_ACCELERATION_PENALTY    = 0 # [rewards-per-unit-acceleration-per-second] how much we should penalize all acceleration
   
         
         # Old (Phase 3) Reward function properties

@@ -124,8 +124,6 @@ elif Settings.RESUME_TRAINING and Settings.ENVIRONMENT != 'manipulator':
     starting_episode_number   = np.ones(Settings.NUMBER_OF_ACTORS, dtype = int) # All actors start at episode 0
     starting_iteration_number = 1 # learner starts at iteration 0
     
-    # Set the max number of episodes to 2 so that we stop quickly
-    Settings.NUMBER_OF_EPISODES = 2
     
 else: # Otherwise, we are starting from scratch
     # Generate a filename using Settings.RUN_NAME with the current timestamp

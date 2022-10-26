@@ -1,0 +1,25 @@
+TensorFlow 2.0 Upgrade Script
+-----------------------------
+Converted 1 files
+Detected 1 issues that require attention
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+File: use_deep_guidance_spot.py
+--------------------------------------------------------------------------------
+use_deep_guidance_spot.py:376:20: WARNING: *.save requires manual check. (This warning is only applicable if the code saves a tf.Keras model) Keras model.save now saves to the Tensorflow SavedModel format by default, instead of HDF5. To continue saving to HDF5, add the argument save_format='h5' to the save() function.
+================================================================================
+Detailed log follows:
+
+================================================================================
+--------------------------------------------------------------------------------
+Processing file 'use_deep_guidance_spot.py'
+ outputting to 'use_deep_guidance_spot_TF2.py'
+--------------------------------------------------------------------------------
+
+199:8: INFO: Renamed 'tf.reset_default_graph' to 'tf.compat.v1.reset_default_graph'
+202:20: INFO: Renamed 'tf.Session' to 'tf.compat.v1.Session'
+204:33: INFO: Renamed 'tf.placeholder' to 'tf.compat.v1.placeholder'
+209:16: INFO: Renamed 'tf.train.Saver' to 'tf.compat.v1.train.Saver'
+376:20: WARNING: *.save requires manual check. (This warning is only applicable if the code saves a tf.Keras model) Keras model.save now saves to the Tensorflow SavedModel format by default, instead of HDF5. To continue saving to HDF5, add the argument save_format='h5' to the save() function.
+--------------------------------------------------------------------------------
+

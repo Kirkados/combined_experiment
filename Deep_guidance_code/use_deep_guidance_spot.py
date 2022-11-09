@@ -30,8 +30,10 @@ Deep guidance output in x and y are in the chaser body frame
 # Do you want the chaser's absolute position to be included in the policy_input?
 CHASER_ABSOLUTE_POSITION = True
 
-CAMERA_PROCESSING_TIME = 0.7 # [s] how long it takes SPOTNet to process an image
-PHASESPACE_TIMESTEP = 0.5 # [s] equal to serverRate
+CAMERA_PROCESSING_TIME = 6 # [s] how long it takes SPOTNet to process an image
+PHASESPACE_TIMESTEP = 0.05 # [s] equal to serverRate
+
+HOLD_POINT_RADIUS = 0.9 # [m]
 
 # Are we testing?
 testing = False
@@ -193,7 +195,7 @@ class DeepGuidanceModelRunner:
         self.SPOTNet_target_angle_inertial = 0
 
         # Uncomment this on TF2.0
-        # tf.compat.v1.disable_eager_execution()
+        #tf.compat.v1.disable_eager_execution()
         
         # Clear any old graph
         tf.reset_default_graph()
@@ -289,6 +291,24 @@ class DeepGuidanceModelRunner:
                 if CHASER_ABSOLUTE_POSITION:
                     # With chaser absolute position
                     policy_input = np.array([relative_pose_body[0] - self.offset_x, relative_pose_body[1] - self.offset_y, (self.SPOTNet_target_angle_inertial - Pi_red_theta - self.offset_angle)%(2*np.pi), Pi_red_x, Pi_red_y, Pi_red_theta, Pi_red_Vx, Pi_red_Vy, Pi_red_omega, Pi_black_omega])
+                    
+                    ############## New policy input as of Nov 9 2022                    
+                    # Calculate the desired X, Y, theta, Vx, Vy, omega 
+                    # relative to the chaser's current state
+                    # all in the inertial frame                    
+                    # Calculate desired position and velocity in the inertial frame
+                    desired_position_relative_to_target_I = np.array([-np.sin(self.SPOTNet_target_angle_inertial)*(HOLD_POINT_RADIUS), np.cos(self.SPOTNet_target_angle_inertial)*(HOLD_POINT_RADIUS), -np.pi/2])
+                    desired_position_I = np.array([self.SPOTNet_target_x_inertial, self.SPOTNet_target_y_inertial, self.SPOTNet_target_angle_inertial]) + desired_position_relative_to_target_I
+                    desired_velocity_I = np.array([Pi_black_Vx, Pi_black_Vy, Pi_black_omega]) + np.cross(np.array([0,0,self.Pi_black_omega]), desired_position_relative_to_target_I)                    
+                    # Now calculate the chaser's relative position and velocity to that desired location and velocity in the inertial frame
+                    chaser_position_error_inertial = desired_position_I - np.array([Pi_red_x, Pi_red_y, Pi_red_theta])
+                    chaser_velocity_error_inertial = desired_velocity_I - np.array([Pi_red_Vx, Pi_red_Vy, Pi_red_omega])                    
+                    policy_input = np.array([Pi_red_x, Pi_red_y, Pi_red_theta & (2*np.pi), Pi_red_Vx, Pi_red_Vy, Pi_red_omega, relative_pose_inertial, chaser_position_error_inertial, chaser_velocity_error_inertial])
+                    
+                    
+                    
+                    #total_state = np.concatenate([self.chaser_position[:2], np.array([self.chaser_position[2] % (2*np.pi)]), self.chaser_velocity, self.arm_angles, self.arm_angular_rates, self.target_position[:2], np.array([self.target_position[2] % (2*np.pi)]), self.target_velocity, self.end_effector_position, self.end_effector_velocity, self.relative_position_inertial, self.relative_angle, self.end_effector_position_body, self.end_effector_velocity_body, self.chaser_position_error_inertial, self.chaser_velocity_error_inertial])
+                    
                 else:
                     # Without chaser absolute position
                     policy_input = np.array([relative_pose_body[0] - self.offset_x, relative_pose_body[1] - self.offset_y, (self.SPOTNet_target_angle_inertial - Pi_red_theta - self.offset_angle)%(2*np.pi), Pi_red_theta, Pi_red_Vx, Pi_red_Vy, Pi_red_omega, Pi_black_omega])
@@ -303,6 +323,17 @@ class DeepGuidanceModelRunner:
                 if CHASER_ABSOLUTE_POSITION:
                     # With chaser absolute position
                     policy_input = np.array([relative_pose_body[0] - self.offset_x, relative_pose_body[1] - self.offset_y, (Pi_black_theta - Pi_red_theta - self.offset_angle)%(2*np.pi), Pi_red_x, Pi_red_y, Pi_red_theta, Pi_red_Vx, Pi_red_Vy, Pi_red_omega, Pi_black_omega])
+                    
+                    
+                    ########## New policy input as of Nov 9 2022
+                    desired_position_relative_to_target_I = np.array([-np.sin(Pi_black_theta)*(HOLD_POINT_RADIUS), np.cos(Pi_black_theta)*(HOLD_POINT_RADIUS), -np.pi/2])
+                    desired_position_I = np.array([Pi_black_x, Pi_black_y, Pi_black_theta]) + desired_position_relative_to_target_I
+                    desired_velocity_I = np.array([Pi_black_Vx, Pi_black_Vy, Pi_black_omega]) + np.cross(np.array([0,0,self.Pi_black_omega]), desired_position_relative_to_target_I)                    
+                    # Now calculate the chaser's relative position and velocity to that desired location and velocity in the inertial frame
+                    chaser_position_error_inertial = desired_position_I - np.array([Pi_red_x, Pi_red_y, Pi_red_theta])
+                    chaser_velocity_error_inertial = desired_velocity_I - np.array([Pi_red_Vx, Pi_red_Vy, Pi_red_omega])  
+                    policy_input = np.array([Pi_red_x, Pi_red_y, Pi_red_theta & (2*np.pi), Pi_red_Vx, Pi_red_Vy, Pi_red_omega, relative_pose_inertial, chaser_position_error_inertial, chaser_velocity_error_inertial])
+                    
                 else:                    
                     # Without chaser absolute position
                     policy_input = np.array([relative_pose_body[0] - self.offset_x, relative_pose_body[1] - self.offset_y, (Pi_black_theta - Pi_red_theta - self.offset_angle)%(2*np.pi), Pi_red_theta, Pi_red_Vx, Pi_red_Vy, Pi_red_omega, Pi_black_omega])

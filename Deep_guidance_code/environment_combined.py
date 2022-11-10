@@ -92,7 +92,7 @@ class Environment:
         The positions are in inertial frame, unless noted otherwise, but the manipulator angles are in the joint frame.
         
         """
-        self.ON_CEDAR                 = False # False for Graham, Béluga, Niagara, and RCDC
+        self.ON_CEDAR                 = True # False for Graham, Béluga, Niagara, and RCDC
         self.ACTIONS_IN_INERTIAL      = True # Are actions being calculated in the inertial frame or body frame?
         self.TOTAL_STATE_SIZE         = 35 # [chaser_x, chaser_y, chaser_theta, chaser_x_dot, chaser_y_dot, chaser_theta_dot, shoulder_theta, elbow_theta, wrist_theta, shoulder_theta_dot, elbow_theta_dot, wrist_theta_dot, target_x, target_y, target_theta, target_x_dot, target_y_dot, target_theta_dot, ee_x, ee_y, ee_x_dot, ee_y_dot, relative_x_I, relative_y_I, relative_theta, ee_x_b, ee_y_b, ee_x_dot_b, ee_y_dot_b, rel_des_x_I, rel_des_y_I, rel_des_theta, rel_des_vx_I, rel_des_vy_I, rel_des_omega]
         ### Note: TOTAL_STATE contains all relevant information describing the problem, and all the information needed to animate the motion
@@ -232,8 +232,8 @@ class Environment:
         self.DESIRED_VELOCITY_REWARD         = 0#1 # [rewards/second]
         self.DESIRED_ANGULAR_RATE_ERROR      = 1 * np.pi/180 # [deg/s] maximum deviation from the desired angular rate before rewards are withheld
         self.DESIRED_ANGULAR_VELOCITY_REWARD = 0#0.25 # [rewards/second]
-        self.ACCELERATION_PENALTY            = 0 # [rewards-per-unit-acceleration-per-second] how much we should penalize all acceleration
-        self.ANGULAR_ACCELERATION_PENALTY    = 0 # [rewards-per-unit-acceleration-per-second] how much we should penalize all acceleration
+        self.ACCELERATION_PENALTY            = 0#30 # [rewards-per-unit-acceleration-per-second] how much we should penalize all acceleration
+        self.ANGULAR_ACCELERATION_PENALTY    = 0#15 # [rewards-per-unit-acceleration-per-second] how much we should penalize all acceleration
   
         
         # Old (Phase 3) Reward function properties
@@ -251,7 +251,7 @@ class Environment:
         self.CHECK_END_EFFECTOR_COLLISION          = True # Whether to do collision detection on the end-effector
         self.CHECK_END_EFFECTOR_FORBIDDEN          = True # Whether to expand the collision area to include the forbidden zone
         self.END_EFFECTOR_COLLISION_PENALTY        = 0 # [rewards/timestep] Penalty for end-effector collisions (with target or optionally with the forbidden zone)
-        self.END_ON_COLLISION                      = True # Whether to end the episode upon a collision.
+        self.END_ON_COLLISION                      = False # Whether to end the episode upon a collision.
         self.GIVE_MID_WAY_REWARD                   = False # Whether or not to give a reward mid-way towards the docking port to encourage the learning to move in the proper direction
         self.MID_WAY_REWARD_RADIUS                 = 0 # [ms] the radius from the DOCKING_PORT_MOUNT_POSITION that the mid-way reward is given
         self.MID_WAY_REWARD                        = 0 # The value of the mid-way reward
@@ -270,7 +270,7 @@ class Environment:
         
         # Some calculations that don't need to be changed
         self.TABLE_BOUNDARY    = Polygon(np.array([[0,0], [self.MAX_X_POSITION, 0], [self.MAX_X_POSITION, self.MAX_Y_POSITION], [0, self.MAX_Y_POSITION], [0,0]]))
-        self.VELOCITY_LIMIT    = np.array([self.MAX_VELOCITY, self.MAX_VELOCITY, self.MAX_BODY_ANGULAR_VELOCITY, self.MAX_ARM_ANGULAR_VELOCITY, self.MAX_ARM_ANGULAR_VELOCITY, self.MAX_ARM_ANGULAR_VELOCITY]) # [m/s, m/s, rad/s] maximum allowable velocity/angular velocity; enforced by the controller
+        self.VELOCITY_LIMIT    = np.array([self.MAX_VELOCITY, self.MAX_VELOCITY, self.MAX_BODY_ANGULAR_VELOCITY]) # [m/s, m/s, rad/s] maximum allowable velocity/angular velocity; enforced by the controller
         self.ANGLE_LIMIT       = np.pi/2 # Used as a hard limit in the dynamics in order to protect the arm from hitting the chaser
         self.LOWER_STATE_BOUND = np.concatenate([self.LOWER_STATE_BOUND, np.tile(self.LOWER_ACTION_BOUND, self.AUGMENT_STATE_WITH_ACTION_LENGTH)]) # lower bound for each element of TOTAL_STATE
         self.UPPER_STATE_BOUND = np.concatenate([self.UPPER_STATE_BOUND, np.tile(self.UPPER_ACTION_BOUND, self.AUGMENT_STATE_WITH_ACTION_LENGTH)]) # upper bound for each element of TOTAL_STATE        
